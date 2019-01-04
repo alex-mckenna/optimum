@@ -11,6 +11,7 @@ import GHC.TypeLits (Nat, type (+))
 data Phase
     = PhaseI
     | PhaseII
+    deriving (Eq)
 
 
 type family Cols (p :: Phase) (v :: Nat) (s :: Nat) (a :: Nat) :: Nat where

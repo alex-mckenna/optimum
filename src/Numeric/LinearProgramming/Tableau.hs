@@ -29,7 +29,7 @@ type IsTableau p v s a =
 
 data Tableau (p :: Phase) (v :: Nat) (s :: Nat) (a :: Nat) where
     Tableau :: (IsTableau p v s a)
-        => VarMap (Rows p s a) (Cols p v s a)
+        => VarMap p (Rows p s a) (Cols p v s a)
         -> L (Rows p s a) (Cols p v s a)
         -> Tableau p v s a
 

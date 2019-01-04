@@ -93,19 +93,21 @@ nextArtificial builder =
 
 buildW :: (IsBuilder v s a)
     => Builder v s a -> Builder v s a
-buildW = (singleton 1 0 1 0 xs ObjectiveP1 ObjectiveP1 <>)
+buildW = (singleton 1 0 1 0 xs obj obj <>)
   where
-    xs = SVec.replicate 0
+    xs  = SVec.replicate 0
+    obj = Objective PhaseI
 
 
 buildZ :: forall v s a. (IsBuilder v s a)
     => Coeffs v -> Builder v s a -> Builder v s a
 buildZ xs acc =
-    singleton 0 1 0 0 negXs ObjectiveP2 ObjectiveP2
+    singleton 0 1 0 0 negXs obj obj
         <> acc { colVars = vars <> colVars acc }
   where
     negXs = SVec.map negate xs
     vars  = Vec.toList $ Vec.generate @v (Decision . fromIntegral)
+    obj   = Objective PhaseII
 
 
 buildObjectives :: (IsBuilder v s a)
@@ -178,7 +180,8 @@ toMatrix
         , rows ~ Rows 'PhaseI s a
         , cols ~ Cols 'PhaseI v s a
         )
-    => Builder v s a -> Maybe (L rows cols)
+    => Builder v s a
+    -> Maybe (L rows cols)
 toMatrix builder = do
     coeff <- fmap toDynMatrix . Vec.fromListN @rows $ coeffs builder
     let mat = w ||| z ||| coeff ||| slack ||| a ||| y
@@ -206,10 +209,10 @@ toVarMap
         , cols ~ Cols 'PhaseI v s a
         )
     => Builder v s a
-    -> Maybe (VarMap rows cols)
+    -> Maybe (VarMap 'PhaseI rows cols)
 toVarMap builder = do
-    rows <- Vec.fromList $ rowVars builder
-    cols <- Vec.fromList $ colVars builder
+    rVars <- Vec.fromList $ rowVars builder
+    cVars <- Vec.fromList $ colVars builder
 
-    pure $ VarMap rows cols
+    pure $ VarMap rVars cVars
 
