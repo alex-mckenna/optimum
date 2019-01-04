@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE RecordWildCards        #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeOperators          #-}
@@ -13,15 +14,18 @@ module Numeric.LinearProgramming.Tableau.Builder
     , toVarMap
     ) where
 
+import           Prelude hiding                             ((++))
+
 import qualified Data.List as List
 import           Data.Proxy
 import qualified Data.Vector.Storable as SV
 import qualified Data.Vector.Sized as Vec
+import           Data.Vector.Storable.Sized                 ((++))
 import qualified Data.Vector.Storable.Sized as SVec
 import           GHC.TypeLits
 import           Numeric.LinearAlgebra as LA hiding         ((<>))
 import           Numeric.LinearAlgebra.Static               (L)
-import qualified Numeric.LinearAlgebra.Static as LS         (create, unwrap)
+import qualified Numeric.LinearAlgebra.Static as LS
 import qualified Numeric.LinearAlgebra.Static.Vector as LS
 
 import           Numeric.LinearProgramming.Problem
@@ -77,18 +81,12 @@ nextSlack builder =
   where
     numSlack = fromIntegral . natVal $ Proxy @s
 
-    isSlack (Slack _)   = True
-    isSlack _           = False
-
 
 nextArtificial :: Builder v s a -> VarName
 nextArtificial builder =
     case List.find isArtificial (colVars builder) of
         Just (Artificial i) -> Artificial (i - 1)
         _                   -> error "nextArtificial: No artificial variables"
-  where
-    isArtificial (Artificial _) = True
-    isArtificial _              = False
 
 
 buildW :: (IsBuilder v s a)
@@ -168,13 +166,12 @@ adjustWRow rVars mat =
     newRow  = List.foldl' (SV.zipWith (-)) (mat!0) equRows
     equRows = (mat !) <$> List.findIndices isArtificial rVars
 
-    isArtificial (Artificial _) = True
-    isArtificial _              = False
-
 
 toMatrix
     :: forall v s a rows cols.
         ( IsBuilder v s a
+        , KnownNat (s + a)
+        , KnownNat (((2 + v) + (s + a)) + 2)
         , KnownNat rows
         , KnownNat cols
         , rows ~ Rows 'PhaseI s a
@@ -182,24 +179,26 @@ toMatrix
         )
     => Builder v s a
     -> Maybe (L rows cols)
-toMatrix builder = do
-    coeff <- fmap toDynMatrix . Vec.fromListN @rows $ coeffs builder
-    let mat = w ||| z ||| coeff ||| slack ||| a ||| y
+toMatrix Builder{..} = do
+    slackRows <- mapM (SVec.toSized @(s + a)) $ LA.toRows slackMat
+    tableRows <- mapM (LS.exactLength @cols . LS.vecR) $ List.zipWith6
+        toTableRow objectiveP1 objectiveP2 coeffs slackRows artificial rhs
 
-    LS.create $ adjustWRow (rowVars builder) mat
+    table     <- fmap LS.rowsL $ Vec.fromListN @rows tableRows
+
+    LS.create . adjustWRow rowVars $ LS.unwrap table
   where
-    toDynMatrix   = LS.unwrap . LS.rowsL . fmap LS.vecR
-
     numSlack      = fromIntegral . natVal $ Proxy @s
     numArtificial = fromIntegral . natVal $ Proxy @a
-    w             = LA.matrix 1 $ objectiveP1 builder
-    z             = LA.matrix 1 $ objectiveP2 builder
-    a             = LA.matrix 1 $ artificial builder
-    y             = LA.matrix 1 $ rhs builder
 
-    slack         = LA.konst 0 (1, numSlack) ||| LA.konst 1 (1, numArtificial)
-        === LA.konst 0 (1, numSlack + numArtificial)
-        === LA.ident (numSlack + numArtificial)
+    slackMat      = LA.fromBlocks
+        [ [LA.konst 0 (1, numSlack) ||| LA.konst 1 (1, numArtificial)]
+        , [0]
+        , [LA.ident (numSlack + numArtificial)]
+        ]
+
+    toTableRow w z cs ss a r  =
+        SVec.fromTuple (w, z) ++ cs ++ ss ++ SVec.fromTuple (a, r)
 
 
 toVarMap
@@ -210,9 +209,6 @@ toVarMap
         )
     => Builder v s a
     -> Maybe (VarMap 'PhaseI rows cols)
-toVarMap builder = do
-    rVars <- Vec.fromList $ rowVars builder
-    cVars <- Vec.fromList $ colVars builder
-
-    pure $ VarMap rVars cVars
+toVarMap Builder{..} =
+    VarMap <$> Vec.fromList rowVars <*> Vec.fromList colVars
 

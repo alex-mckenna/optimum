@@ -22,6 +22,8 @@ type IsTableau p v s a =
     ( KnownNat v
     , KnownNat s
     , KnownNat a
+    , KnownNat (s + a)
+    , KnownNat (((2 + v) + (s + a)) + 2)
     , KnownNat (Rows p s a)
     , KnownNat (Cols p v s a)
     )

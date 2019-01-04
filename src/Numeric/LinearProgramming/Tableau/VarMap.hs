@@ -31,6 +31,27 @@ instance Show VarName where
     show RHS                    = "="
 
 
+isSpecial :: VarName -> Bool
+isSpecial Objective{} = True
+isSpecial RHS         = True
+isSpecial _           = False
+
+
+isDecision :: VarName -> Bool
+isDecision Decision{} = True
+isDecision _          = False
+
+
+isSlack :: VarName -> Bool
+isSlack Slack{} = True
+isSlack _       = False
+
+
+isArtificial :: VarName -> Bool
+isArtificial Artificial{} = True
+isArtificial _            = False
+
+
 type IsVarMap rows cols =
     (KnownNat rows, KnownNat cols)
 
