@@ -1,0 +1,33 @@
+name:                hmatrix-lp
+version:             0.1.0.0
+category:            Numeric
+synopsis:            Linear Programming with hmatrix
+github:              "alex-mckenna/hmatrix-lp"
+license:             BSD3
+author:              "Alex McKenna"
+maintainer:          "alexmckenna@outlook.com"
+copyright:           "2019 Alex McKenna"
+
+ghc-options:
+- -fhide-source-paths
+- -Wall
+- -Wcompat
+- -Werror
+- -Wincomplete-record-updates
+- -Wincomplete-uni-patterns
+- -Wmissing-signatures
+- -Wsimplifiable-class-constraints
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+
+  dependencies:
+  - finite-typelits
+  - hmatrix
+  - hmatrix-vector-sized
+  - vector
+  - vector-sized
+
