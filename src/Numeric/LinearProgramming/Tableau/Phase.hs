@@ -1,13 +1,11 @@
-{-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Numeric.LinearProgramming.Tableau.Phase where
 
-import GHC.TypeLits
+import GHC.TypeLits (Nat, type (+))
 
 
 data Phase

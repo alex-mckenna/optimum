@@ -1,19 +1,15 @@
-{-# LANGUAGE ConstraintKinds        #-}
-{-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE KindSignatures         #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeApplications       #-}
-{-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE ConstraintKinds    #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE KindSignatures     #-}
 
 module Numeric.LinearProgramming.Tableau.VarMap where
 
 import           Data.Finite                (Finite)
-import           Data.Kind
+import           Data.Kind                  (Type)
 import           Data.Vector.Sized          (Vector, (//))
-import qualified Data.Vector.Sized as Vec
-import           GHC.TypeLits
+import qualified Data.Vector.Sized as Vec   (index)
+import           GHC.TypeLits               (Nat, KnownNat)
 
 
 data VarName

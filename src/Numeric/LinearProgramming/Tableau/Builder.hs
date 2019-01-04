@@ -19,10 +19,9 @@ import qualified Data.Vector.Storable as SV
 import qualified Data.Vector.Sized as Vec
 import qualified Data.Vector.Storable.Sized as SVec
 import           GHC.TypeLits
-import           Numeric.LinearAlgebra                      (Matrix, (!), (|||), (===))
-import qualified Numeric.LinearAlgebra as LA
+import           Numeric.LinearAlgebra as LA hiding         ((<>))
 import           Numeric.LinearAlgebra.Static               (L)
-import qualified Numeric.LinearAlgebra.Static as LS
+import qualified Numeric.LinearAlgebra.Static as LS         (create, unwrap)
 import qualified Numeric.LinearAlgebra.Static.Vector as LS
 
 import           Numeric.LinearProgramming.Problem
@@ -161,11 +160,11 @@ mkBuilder = go (Builder [] [] [] [] [] [] [Artificial ix, RHS])
 
 
 adjustWRow :: [VarName] -> Matrix Double -> Matrix Double
-adjustWRow rows mat =
+adjustWRow rVars mat =
     LA.asRow newRow === LA.dropRows 1 mat
   where
     newRow  = List.foldl' (SV.zipWith (-)) (mat!0) equRows
-    equRows = (mat !) <$> List.findIndices isArtificial rows
+    equRows = (mat !) <$> List.findIndices isArtificial rVars
 
     isArtificial (Artificial _) = True
     isArtificial _              = False

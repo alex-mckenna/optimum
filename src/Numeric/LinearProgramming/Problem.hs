@@ -9,7 +9,7 @@ module Numeric.LinearProgramming.Problem where
 
 import Data.Kind                    (Type)
 import Data.Vector.Storable.Sized   (Vector)
-import GHC.TypeLits
+import GHC.TypeLits                 (KnownNat, Nat, type (+))
 
 
 type Coeff      = Double

@@ -3,19 +3,14 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE KindSignatures         #-}
-{-# LANGUAGE RecordWildCards        #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeOperators          #-}
 
 module Numeric.LinearProgramming.Tableau where
 
-import           GHC.Stack
-
 import           GHC.TypeLits
 import qualified Numeric.LinearAlgebra as LA
-import           Numeric.LinearAlgebra.Static               (L)
-import qualified Numeric.LinearAlgebra.Static as LS
+import           Numeric.LinearAlgebra.Static as LS
 
 import           Numeric.LinearProgramming.Problem
 import           Numeric.LinearProgramming.Tableau.Builder
@@ -42,7 +37,7 @@ instance Show (Tableau p v s a) where
     show (Tableau _ table) = LA.dispf 1 $ LS.unwrap table
 
 
-mkPhaseI :: forall v s a. (HasCallStack, IsTableau 'PhaseI v s a)
+mkPhaseI :: forall v s a. (IsTableau 'PhaseI v s a)
     => Problem v s a -> Tableau 'PhaseI v s a
 mkPhaseI problem =
     case toTableau $ mkBuilder problem of

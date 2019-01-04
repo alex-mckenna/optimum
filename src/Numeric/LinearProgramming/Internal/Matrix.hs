@@ -1,4 +1,4 @@
-{-# LANGUAGE DataKinds      #-}
+{-# LANGUAGE DataKinds #-}
 
 -- The "Numeric.LinearAlgebra.Static" module does not have parity for a lot
 -- of the functionality in the main module. This module makes up for that by
