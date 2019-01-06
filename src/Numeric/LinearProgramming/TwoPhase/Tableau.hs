@@ -3,9 +3,9 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE KindSignatures         #-}
-{-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeOperators          #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 module Numeric.LinearProgramming.TwoPhase.Tableau
     ( -- * Tableaus
@@ -14,9 +14,9 @@ module Numeric.LinearProgramming.TwoPhase.Tableau
     , mkPhaseI
     , mkPhaseII
       -- * Operations on Tableaus
-    , tableauStep
-    , tableauDictionary
     , tableauOptimal
+    , tableauResult
+    , tableauStep
     ) where
 
 import           Debug.Trace
@@ -25,12 +25,10 @@ import qualified Numeric.LinearAlgebra as LA
 import           Numeric.LinearAlgebra.Static as LS
 
 import           Numeric.LinearProgramming.Problem
-import           Numeric.LinearProgramming.Solver.Types
 import           Numeric.LinearProgramming.TwoPhase.Builder
-import           Numeric.LinearProgramming.TwoPhase.Phase
 import           Numeric.LinearProgramming.TwoPhase.Pivot
+import           Numeric.LinearProgramming.TwoPhase.Types
 import           Numeric.LinearProgramming.TwoPhase.VarMap
-import           Numeric.LinearProgramming.TwoPhase.VarName
 
 
 type IsTableau p v s a =
@@ -44,20 +42,18 @@ type IsTableau p v s a =
     )
 
 
-data Tableau :: Phase -> Nat -> Nat -> Nat -> * where
-    Tableau :: (IsTableau p v s a)
-        => VarMap p (Rows p s a) (Cols p v s a)
-        -> L (Rows p s a) (Cols p v s a)
-        -> Tableau p v s a
+data Tableau (p :: Phase) (v :: Nat) (s :: Nat) (a :: Nat)
+    = Tableau
+        { varMap :: VarMap p (Rows p s a) (Cols p v s a)
+        , table  :: L (Rows p s a) (Cols p v s a)
+        }
 
-
-instance Show (Tableau p v s a) where
-    show (Tableau _ table) = LA.dispf 1 $ LS.unwrap table
+instance (IsTableau p v s a) => Show (Tableau p v s a) where
+    show = LA.dispf 1 . LS.unwrap . table
 
 
 mkPhaseI
-    :: forall v s a.
-        (IsTableau 'PhaseI v s a)
+    :: (IsTableau 'PhaseI v s a)
     => Problem v s a
     -> Tableau 'PhaseI v s a
 mkPhaseI problem =
@@ -73,9 +69,10 @@ mkPhaseII = undefined
 
 
 tableauStep
-    :: (VarName -> Bool)
+    :: (IsTableau p v s a)
+    => (VarName -> Bool)
     -> Tableau p v s a
-    -> Either SolveError (Tableau p v s a)
+    -> Either TwoPhaseError (Tableau p v s a)
 tableauStep f (Tableau vs x) = do
     enter <- tryOr Optimal $ enteringFrom colChoices x
     leave <- tryOr Unbounded $ leavingFrom enter rowChoices x
@@ -91,14 +88,20 @@ tableauStep f (Tableau vs x) = do
     rowChoices  = allRows vs
 
 
-tableauDictionary :: (IsTableau p v s a) => Tableau p v s a -> Dictionary
-tableauDictionary (Tableau vs x) = undefined
+tableauResult
+    :: (IsTableau p v s a)
+    => Tableau p v s a
+    -> TwoPhaseResult v
+tableauResult _ = undefined
 
 
 -- A tableau is at it's optimal solution if all coefficients
 -- in the objective row are non-negative.
 --
-tableauOptimal :: (IsTableau p v s a) => Tableau p v s a -> Bool
+tableauOptimal
+    :: (IsTableau p v s a)
+    => Tableau p v s a
+    -> Bool
 tableauOptimal (Tableau vs x) =
     allCells (>= 0) coeffCells x
   where

@@ -17,8 +17,7 @@ import           Data.Vector.Sized                          (Vector, (//))
 import qualified Data.Vector.Sized as Vec
 import           GHC.TypeLits                               (KnownNat, Nat)
 
-import           Numeric.LinearProgramming.TwoPhase.Phase
-import           Numeric.LinearProgramming.TwoPhase.VarName
+import           Numeric.LinearProgramming.TwoPhase.Types
 
 
 type IsVarMap rows cols =

@@ -30,9 +30,8 @@ import qualified Numeric.LinearAlgebra.Static as LS
 import qualified Numeric.LinearAlgebra.Static.Vector as LS
 
 import           Numeric.LinearProgramming.Problem
-import           Numeric.LinearProgramming.TwoPhase.Phase
+import           Numeric.LinearProgramming.TwoPhase.Types
 import           Numeric.LinearProgramming.TwoPhase.VarMap
-import           Numeric.LinearProgramming.TwoPhase.VarName
 
 
 type IsBuilder v s a =

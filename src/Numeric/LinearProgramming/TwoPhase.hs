@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
 module Numeric.LinearProgramming.TwoPhase
@@ -14,10 +15,8 @@ module Numeric.LinearProgramming.TwoPhase
 
 import Numeric.LinearProgramming.Problem                (Problem)
 import Numeric.LinearProgramming.Solver.Class
-import Numeric.LinearProgramming.Solver.Types
 import Numeric.LinearProgramming.TwoPhase.Tableau
-import Numeric.LinearProgramming.TwoPhase.Phase
-import Numeric.LinearProgramming.TwoPhase.VarName
+import Numeric.LinearProgramming.TwoPhase.Types
 
 
 type IsTwoPhase v s a =
@@ -25,15 +24,22 @@ type IsTwoPhase v s a =
 
 
 data TwoPhase v s a
-    = TableauI  (Tableau 'PhaseI  v s a)
+    = TableauI  (Tableau 'PhaseI v s a)
     | TableauII (Tableau 'PhaseII v s a)
-    deriving (Show)
 
 
-instance (IsTwoPhase v s a) => CanSolve (TwoPhase v s a) where
-    step        = twoPhaseStep
-    dictionary  = twoPhaseDictionary
+instance (IsTwoPhase v s a) => Show (TwoPhase v s a) where
+    show (TableauI  x) = show x
+    show (TableauII x) = show x
+
+
+instance (IsTwoPhase v s a) => Solver (TwoPhase v s a) where
+    type Error  (TwoPhase v s a)  = TwoPhaseError
+    type Result (TwoPhase v s a)  = TwoPhaseResult v
+
     isOptimal   = twoPhaseOptimal
+    toResult    = twoPhaseResult
+    step        = twoPhaseStep
 
 
 -- Construct a solver for the given problem that uses the Two-Phase Simplex
@@ -41,7 +47,8 @@ instance (IsTwoPhase v s a) => CanSolve (TwoPhase v s a) where
 -- basic feasible solution (or identify infeasibility), then solves the initial
 -- problem using the obtained solution.
 --
-twoPhase :: (IsTwoPhase v s a) => Problem v s a -> TwoPhase v s a
+twoPhase :: (IsTwoPhase v s a)
+    => Problem v s a -> TwoPhase v s a
 twoPhase = TableauI . mkPhaseI
 
 
@@ -55,14 +62,15 @@ twoPhaseOptimal (TableauI  _) = False
 twoPhaseOptimal (TableauII x) = tableauOptimal x
 
 
-twoPhaseDictionary :: (IsTwoPhase v s a)
-    => TwoPhase v s a -> Dictionary
-twoPhaseDictionary (TableauI  x)  = tableauDictionary x
-twoPhaseDictionary (TableauII x)  = tableauDictionary x
+twoPhaseResult :: (IsTwoPhase v s a)
+    => TwoPhase v s a -> TwoPhaseResult v
+twoPhaseResult (TableauI  x)  = tableauResult x
+twoPhaseResult (TableauII x)  = tableauResult x
 
 
 twoPhaseStep :: (IsTwoPhase v s a)
-    => TwoPhase v s a -> Either SolveError (TwoPhase v s a)
+    => TwoPhase v s a
+    -> Either TwoPhaseError (TwoPhase v s a)
 twoPhaseStep state = case state of
     TableauI  x
         | tableauOptimal x  -> fmap TableauII . stepII $ mkPhaseII x
