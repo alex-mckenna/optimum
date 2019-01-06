@@ -1,9 +1,10 @@
 {-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE KindSignatures         #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
-module Numeric.LinearProgramming.Tableau.Phase
+module Numeric.LinearProgramming.TwoPhase.Phase
     ( -- Simplex Phases
       Phase(..)
       -- Phase-Dependent Types

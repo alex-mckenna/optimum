@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeOperators          #-}
 
-module Numeric.LinearProgramming.Tableau.Builder
+module Numeric.LinearProgramming.TwoPhase.Builder
     ( -- Building Tableaus
       mkBuilder
     , toMatrix
@@ -30,8 +30,9 @@ import qualified Numeric.LinearAlgebra.Static as LS
 import qualified Numeric.LinearAlgebra.Static.Vector as LS
 
 import           Numeric.LinearProgramming.Problem
-import           Numeric.LinearProgramming.Tableau.Phase
-import           Numeric.LinearProgramming.Tableau.VarMap
+import           Numeric.LinearProgramming.TwoPhase.Phase
+import           Numeric.LinearProgramming.TwoPhase.VarMap
+import           Numeric.LinearProgramming.TwoPhase.VarName
 
 
 type IsBuilder v s a =
@@ -44,8 +45,8 @@ data Builder (v :: Nat) (s :: Nat) (a :: Nat) = Builder
     , artificial    :: [Double]
     , rhs           :: [Double]
     , coeffs        :: [Coeffs v]
-    , rowVars       :: [VarName]
-    , colVars       :: [VarName]
+    , rowNames      :: [VarName]
+    , colNames      :: [VarName]
     } deriving (Eq, Show)
 
 instance Semigroup (Builder v s a) where
@@ -55,8 +56,8 @@ instance Semigroup (Builder v s a) where
         , artificial  = ax  <> ay
         , rhs         = rx  <> ry
         , coeffs      = cx  <> cy
-        , rowVars     = rvx <> rvy
-        , colVars     = cvx <> cvy
+        , rowNames    = rvx <> rvy
+        , colNames    = cvx <> cvy
         }
 
 
@@ -76,7 +77,7 @@ singleton w z a r c rv cv =
 nextSlack :: forall v s a. (IsBuilder v s a)
     => Builder v s a -> VarName
 nextSlack builder =
-    case List.find isSlack (colVars builder) of
+    case List.find isSlack (colNames builder) of
         Just (Slack i)  -> Slack (i - 1)
         _               -> Slack (numSlack - 1)
   where
@@ -85,7 +86,7 @@ nextSlack builder =
 
 nextArtificial :: Builder v s a -> VarName
 nextArtificial builder =
-    case List.find isArtificial (colVars builder) of
+    case List.find isArtificial (colNames builder) of
         Just (Artificial i) -> Artificial (i - 1)
         _                   -> error "nextArtificial: No artificial variables"
 
@@ -102,7 +103,7 @@ buildZ :: forall v s a. (IsBuilder v s a)
     => Coeffs v -> Builder v s a -> Builder v s a
 buildZ xs acc =
     singleton 0 1 0 0 negXs obj obj
-        <> acc { colVars = vars <> colVars acc }
+        <> acc { colNames = vars <> colNames acc }
   where
     negXs = SVec.map negate xs
     vars  = Vec.toList $ Vec.generate @v (Decision . fromIntegral)
@@ -161,11 +162,11 @@ mkBuilder = go (Builder [] [] [] [] [] [] [Artificial ix, RHS])
 
 
 adjustWRow :: [VarName] -> Matrix Double -> Matrix Double
-adjustWRow rVars mat =
+adjustWRow ns mat =
     LA.asRow newRow === LA.dropRows 1 mat
   where
     newRow  = List.foldl' (SV.zipWith (-)) (mat!0) equRows
-    equRows = (mat !) <$> List.findIndices isArtificial rVars
+    equRows = (mat !) <$> List.findIndices isArtificial ns
 
 
 toMatrix
@@ -187,7 +188,7 @@ toMatrix Builder{..} = do
 
     table     <- fmap LS.rowsL $ Vec.fromListN @rows tableRows
 
-    LS.create . adjustWRow rowVars $ LS.unwrap table
+    LS.create . adjustWRow rowNames $ LS.unwrap table
   where
     numSlack      = fromIntegral . natVal $ Proxy @s
     numArtificial = fromIntegral . natVal $ Proxy @a
@@ -211,5 +212,5 @@ toVarMap
     => Builder v s a
     -> Maybe (VarMap 'PhaseI rows cols)
 toVarMap Builder{..} =
-    VarMap <$> Vec.fromList rowVars <*> Vec.fromList colVars
+    VarMap <$> Vec.fromList rowNames <*> Vec.fromList colNames
 
