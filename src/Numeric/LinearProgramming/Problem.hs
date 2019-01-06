@@ -5,7 +5,14 @@
 {-# LANGUAGE KindSignatures     #-}
 {-# LANGUAGE TypeOperators      #-}
 
-module Numeric.LinearProgramming.Problem where
+module Numeric.LinearProgramming.Problem
+    ( -- * Optimisation Problems
+      Coeff
+    , Coeffs
+    , Constraint(..)
+    , Problem(..)
+    , IsProblem
+    ) where
 
 import Data.Kind                    (Type)
 import Data.Vector.Storable.Sized   (Vector)

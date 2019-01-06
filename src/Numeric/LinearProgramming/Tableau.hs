@@ -6,7 +6,15 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeOperators          #-}
 
-module Numeric.LinearProgramming.Tableau where
+module Numeric.LinearProgramming.Tableau
+    ( -- * Tableaus
+      Tableau(..)
+    , IsTableau
+    , mkPhaseI
+      -- * Exported Submodules
+    , module Numeric.LinearProgramming.Tableau.Phase
+    , module Numeric.LinearProgramming.Tableau.VarMap
+    ) where
 
 import           GHC.TypeLits
 import qualified Numeric.LinearAlgebra as LA

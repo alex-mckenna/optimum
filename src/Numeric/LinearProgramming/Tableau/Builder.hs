@@ -9,7 +9,8 @@
 {-# LANGUAGE TypeOperators          #-}
 
 module Numeric.LinearProgramming.Tableau.Builder
-    ( mkBuilder
+    ( -- Building Tableaus
+      mkBuilder
     , toMatrix
     , toVarMap
     ) where
