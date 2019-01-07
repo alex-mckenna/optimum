@@ -60,7 +60,7 @@ instance Semigroup (Builder v s a) where
         }
 
 
-singleton
+consBuilder
     :: Double
     -> Double
     -> Double
@@ -69,8 +69,17 @@ singleton
     -> VarName
     -> VarName
     -> Builder v s a
-singleton w z a r c rv cv =
-    Builder [w] [z] [a] [r] [c] [rv] [cv]
+    -> Builder v s a
+consBuilder w z a r c rn cn acc@Builder{..} =
+    acc
+        { objectiveP1   = w  : objectiveP1
+        , objectiveP2   = z  : objectiveP2
+        , artificial    = a  : artificial
+        , rhs           = r  : rhs
+        , coeffs        = c  : coeffs
+        , rowNames      = rn : rowNames
+        , colNames      = cn : colNames
+        }
 
 
 nextSlack :: forall v s a. (IsBuilder v s a)
@@ -92,7 +101,8 @@ nextArtificial builder =
 
 buildW :: (IsBuilder v s a)
     => Builder v s a -> Builder v s a
-buildW = (singleton 1 0 1 0 xs obj obj <>)
+buildW =
+    consBuilder 1 0 1 0 xs obj obj
   where
     xs  = SVec.replicate 0
     obj = Objective PhaseI
@@ -101,8 +111,8 @@ buildW = (singleton 1 0 1 0 xs obj obj <>)
 buildZ :: forall v s a. (IsBuilder v s a)
     => Coeffs v -> Builder v s a -> Builder v s a
 buildZ xs acc =
-    singleton 0 1 0 0 negXs obj obj
-        <> acc { colNames = vars <> colNames acc }
+    let temp = consBuilder 0 1 0 0 negXs obj obj acc
+    in  temp { colNames = vars <> colNames temp }
   where
     negXs = SVec.map negate xs
     vars  = Vec.toList $ Vec.generate @v (Decision . fromIntegral)
@@ -117,7 +127,7 @@ buildObjectives xs = buildW . buildZ xs
 buildLEQ :: (IsBuilder v s a)
     => Coeffs v -> Double -> Builder v s a -> Builder v s a
 buildLEQ xs y acc =
-    singleton 0 0 a y xs n n <> acc
+    consBuilder 0 0 a y xs n n acc
   where
     a = if y < 0 then -1 else 0
     n = nextSlack acc
@@ -126,7 +136,7 @@ buildLEQ xs y acc =
 buildGEQ :: (IsBuilder v s a)
     => Coeffs v -> Double -> Builder v s a -> Builder v s a
 buildGEQ xs y acc =
-    singleton 0 0 a y xs n n <> acc
+    consBuilder 0 0 a y xs n n acc
   where
     a = if y > 0 then 1 else 0
     n = nextSlack acc
@@ -135,7 +145,7 @@ buildGEQ xs y acc =
 buildEQU :: (IsBuilder v s a)
     => Coeffs v -> Double -> Builder v s a -> Builder v s a
 buildEQU xs y acc =
-    singleton 0 0 0 y xs n n <> acc
+    consBuilder 0 0 0 y xs n n acc
   where
     n = nextArtificial acc
 

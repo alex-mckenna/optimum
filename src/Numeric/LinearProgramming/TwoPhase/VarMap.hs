@@ -6,9 +6,17 @@ module Numeric.LinearProgramming.TwoPhase.VarMap
     ( -- * Variable Maps
       VarMap(..)
     , IsVarMap
-    , updateRow
+      -- * Columns
+    , allColumns
+    , indexColumns
     , findColumns
+    , findIndicesColumns
+    , elemIndexColumns
+      -- * Rows
     , allRows
+    , indexRows
+    , elemIndexRows
+    , updateRow
     ) where
 
 import           Data.Finite                                (Finite)
@@ -26,15 +34,82 @@ type IsVarMap rows cols =
 
 data VarMap (p :: Phase) (rows :: Nat) (cols :: Nat)
     = VarMap
-        { rowVars :: Vector rows VarName
-        , colVars :: Vector cols VarName
+        { rowVars    :: Vector rows VarName
+        , columnVars :: Vector cols VarName
         }
     deriving (Eq, Show)
 
 
--- Although column variables are fixed in a variable map, the rows
--- change as variables are added or removed from the basis.
---
+allColumns
+    :: (IsVarMap rows cols)
+    => VarMap p rows cols
+    -> [Finite cols]
+allColumns =
+    Vec.toList . Vec.imap const . columnVars
+
+
+indexColumns
+    :: (IsVarMap rows cols)
+    => Finite cols
+    -> VarMap p rows cols
+    -> VarName
+indexColumns i x =
+    Vec.index (columnVars x) i
+
+
+findColumns
+    :: (IsVarMap rows cols)
+    => (VarName -> Bool)
+    -> VarMap p rows cols
+    -> [VarName]
+findColumns f =
+    List.filter f . Vec.toList . columnVars
+
+
+findIndicesColumns
+    :: (IsVarMap rows cols)
+    => (VarName -> Bool)
+    -> VarMap p rows cols
+    -> [Finite cols]
+findIndicesColumns f =
+    fmap fromIntegral . List.findIndices f . Vec.toList . columnVars
+
+
+elemIndexColumns
+    :: (IsVarMap rows cols)
+    => VarName
+    -> VarMap p rows cols
+    -> Maybe (Finite cols)
+elemIndexColumns n =
+    Vec.elemIndex n . columnVars
+
+
+allRows
+    :: (IsVarMap rows cols)
+    => VarMap p rows cols
+    -> [Finite rows]
+allRows =
+    Vec.toList . Vec.imap const . rowVars
+
+
+indexRows
+    :: (IsVarMap rows cols)
+    => Finite rows
+    -> VarMap p rows cols
+    -> VarName
+indexRows i x =
+    Vec.index (rowVars x) i
+
+
+elemIndexRows
+    :: (IsVarMap rows cols)
+    => VarName
+    -> VarMap p rows cols
+    -> Maybe (Finite rows)
+elemIndexRows n =
+    Vec.elemIndex n . rowVars
+
+
 updateRow
     :: (IsVarMap rows cols)
     => (Finite rows, Finite cols)
@@ -42,21 +117,4 @@ updateRow
     -> VarMap p rows cols
 updateRow (i, j) (VarMap r c) =
     VarMap (r // [(i, Vec.index c j)]) c
-
-
-findColumns
-    :: (IsVarMap rows cols)
-    => (VarName -> Bool)
-    -> VarMap p rows cols
-    -> [Finite cols]
-findColumns f (VarMap _ c) =
-    fmap fromIntegral . List.findIndices f $ Vec.toList c
-
-
-allRows
-    :: (IsVarMap rows cols)
-    => VarMap p rows cols
-    -> [Finite rows]
-allRows (VarMap r _) =
-    Vec.toList $ Vec.imap const r
 

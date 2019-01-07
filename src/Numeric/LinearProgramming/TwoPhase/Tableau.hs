@@ -19,7 +19,8 @@ module Numeric.LinearProgramming.TwoPhase.Tableau
     , tableauStep
     ) where
 
-import           Debug.Trace
+import           Data.Maybe
+import qualified Data.Vector.Sized as Vec
 import           GHC.TypeLits
 import qualified Numeric.LinearAlgebra as LA
 import           Numeric.LinearAlgebra.Static as LS
@@ -35,6 +36,7 @@ type IsTableau p v s a =
     ( KnownNat v
     , KnownNat s
     , KnownNat a
+    , KnownNat (v + 1)
     , KnownNat (s + a)
     , KnownNat (((2 + v) + (s + a)) + 2)
     , KnownNat (Rows p s a)
@@ -78,21 +80,38 @@ tableauStep f (Tableau vs x) = do
     leave <- tryOr Unbounded $ leavingFrom enter rowChoices x
 
     let cell = (leave, enter)
-    trace "pivot = " <$> traceShowM cell
 
     pure $ Tableau (updateRow cell vs) (pivot cell x)
   where
     tryOr e     = maybe (Left e) Right
-
-    colChoices  = findColumns f vs
+    colChoices  = findIndicesColumns f vs
     rowChoices  = allRows vs
+
+
+readValue
+    :: (IsTableau p v s a)
+    => VarName
+    -> Tableau p v s a
+    -> Double
+readValue n (Tableau vs x)
+    | Vec.elem n (columnVars vs) =
+        let mIx = (,) <$> elemIndexRows n vs <*> elemIndexColumns RHS vs
+        in  fromMaybe 0 $ fmap (`index` x) mIx
+
+    | otherwise                  =
+        error "readValue: Variable not in tableau"
 
 
 tableauResult
     :: (IsTableau p v s a)
     => Tableau p v s a
     -> TwoPhaseResult v
-tableauResult _ = undefined
+tableauResult t@(Tableau vs _) =
+    TwoPhaseResult . Vec.zip names $ Vec.map (`readValue` t) names
+  where
+    names           = fromJust . Vec.fromList $ findColumns isResultVar vs
+    isResultVar n   = isDecision n || n == currentObj
+    currentObj      = indexColumns 0 vs
 
 
 -- A tableau is at it's optimal solution if all coefficients
@@ -105,6 +124,6 @@ tableauOptimal
 tableauOptimal (Tableau vs x) =
     allCells (>= 0) coeffCells x
   where
-    coeffCells  = (0,) <$> findColumns isCoeff vs
+    coeffCells  = (0,) <$> findIndicesColumns isCoeff vs
     isCoeff n   = isDecision n || isSlack n
 
