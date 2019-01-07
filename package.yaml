@@ -26,6 +26,7 @@ library:
   source-dirs: src
 
   exposed-modules:
+  - Numeric.Optimization
   - Numeric.Optimization.Problem
   - Numeric.Optimization.Solver
   - Numeric.Optimization.TwoPhase

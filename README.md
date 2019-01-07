@@ -44,8 +44,7 @@ Haskell as a language. These are:
 {-# LANGUAGE DataKinds #-}
 
 import qualified Data.Vector.Storable.Sized as Vec
-import           Numeric.Optimization.Problem
-import           Numeric.Optimization.Solver
+import           Numeric.Optimization
 import           Numeric.Optimization.TwoPhase
 
 
