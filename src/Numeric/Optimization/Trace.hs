@@ -27,7 +27,7 @@ instance (IsTrace a) => Solver (Trace a) where
         trace "isOptimal = " . traceShowId . isOptimal . getSolver
 
     toResult    =
-        trace "toResult = " . traceShowId . toResult . getSolver
+        toResult . getSolver
 
     step        =
         trace "step = " . traceShowId . fmap Trace . step . getSolver
