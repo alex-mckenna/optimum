@@ -34,8 +34,9 @@ instance (IsTwoPhase v s a) => Show (TwoPhase v s a) where
 
 
 instance (IsTwoPhase v s a) => Solver (TwoPhase v s a) where
-    type Stop (TwoPhase v s a) = TwoPhaseStop
-    type Vars (TwoPhase v s a) = TwoPhaseVars v
+    type CanSolve (TwoPhase v s a) = IsTwoPhase v s a
+    type Stop     (TwoPhase v s a) = TwoPhaseStop
+    type Vars     (TwoPhase v s a) = TwoPhaseVars v
 
     isOptimal   = twoPhaseOptimal
     toResult    = twoPhaseResult

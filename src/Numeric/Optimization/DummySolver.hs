@@ -10,8 +10,9 @@ newtype DummySolver = DummySolver { state :: Int }
 
 
 instance Solver DummySolver where
-    type Stop DummySolver = ()
-    type Vars DummySolver = Int
+    type CanSolve DummySolver = ()
+    type Stop DummySolver     = ()
+    type Vars DummySolver     = Int
 
     isOptimal   = (== 10) . state
     toResult    = state

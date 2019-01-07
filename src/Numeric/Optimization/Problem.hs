@@ -6,7 +6,7 @@
 {-# LANGUAGE TypeOperators      #-}
 
 module Numeric.Optimization.Problem
-    ( -- * Optimisation Problems
+    ( -- * Linear Optimisation Problems
       Coeff
     , Coeffs
     , Constraint(..)
