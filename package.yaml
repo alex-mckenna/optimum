@@ -1,12 +1,13 @@
-name:                hmatrix-lp
+name:                optimum
 version:             0.1.0.0
+author:              Alex McKenna
+maintainer:          alexmckenna@outlook.com
 category:            Numeric
-synopsis:            Linear Programming with hmatrix
-github:              "alex-mckenna/hmatrix-lp"
+synopsis:            Declarative Numeric Optimization
+description:         See README.md
+github:              alex-mckenna/optimum
 license:             BSD3
-author:              "Alex McKenna"
-maintainer:          "alexmckenna@outlook.com"
-copyright:           "2019 Alex McKenna"
+copyright:           2019 Alex McKenna
 
 ghc-options:
 - -fhide-source-paths
@@ -23,6 +24,11 @@ dependencies:
 
 library:
   source-dirs: src
+
+  exposed-modules:
+  - Numeric.Optimization.Problem
+  - Numeric.Optimization.Solver
+  - Numeric.Optimization.TwoPhase
 
   dependencies:
   - finite-typelits

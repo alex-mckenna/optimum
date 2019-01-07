@@ -5,7 +5,7 @@
 {-# LANGUAGE KindSignatures     #-}
 {-# LANGUAGE TypeOperators      #-}
 
-module Numeric.LinearProgramming.Problem
+module Numeric.Optimization.Problem
     ( -- * Optimisation Problems
       Coeff
     , Coeffs

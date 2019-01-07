@@ -1,3 +1,13 @@
 .stack-work/
-hmatrix-lp.cabal
+
+.ghc.environment.*
+.hpc
+
+*.aux
+*.cabal
+*.eventlog
+*.hp
+*.prof
+
 *~
+

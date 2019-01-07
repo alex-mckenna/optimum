@@ -2,7 +2,7 @@
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE KindSignatures     #-}
 
-module Numeric.LinearProgramming.TwoPhase.VarMap
+module Numeric.Optimization.TwoPhase.VarMap
     ( -- * Variable Maps
       VarMap(..)
     , IsVarMap
@@ -25,7 +25,7 @@ import           Data.Vector.Sized                          (Vector, (//))
 import qualified Data.Vector.Sized as Vec
 import           GHC.TypeLits                               (KnownNat, Nat)
 
-import           Numeric.LinearProgramming.TwoPhase.Types
+import           Numeric.Optimization.TwoPhase.Types
 
 
 type IsVarMap rows cols =

@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
-module Numeric.LinearProgramming.TwoPhase.Types
+module Numeric.Optimization.TwoPhase.Types
     ( -- * Phases / Phase-Dependent Types
       Phase(..)
     , Rows
@@ -16,8 +16,8 @@ module Numeric.LinearProgramming.TwoPhase.Types
     , isSlack
     , isArtificial
       -- * Solver Types
-    , TwoPhaseError(..)
-    , TwoPhaseResult(..)
+    , TwoPhaseStop(..)
+    , TwoPhaseVars(..)
     ) where
 
 import GHC.TypeLits         (Nat, type (+))
@@ -87,14 +87,14 @@ isArtificial _            = False
 
 -- Solver Types
 
-data TwoPhaseError
+data TwoPhaseStop
     = Infeasible
     | Unbounded
-    | Optimal       -- TODO: Not actually an error!
+    | Optimal
     deriving (Eq, Show)
 
 
-newtype TwoPhaseResult v =
-    TwoPhaseResult { getResult :: Vector (v + 1) (VarName, Double) }
+newtype TwoPhaseVars v =
+    TwoPhaseVars { getVars :: Vector (v + 1) (VarName, Double) }
     deriving (Eq, Show)
 

@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
 
-module Numeric.LinearProgramming.TwoPhase.Pivot where
+module Numeric.Optimization.TwoPhase.Pivot where
 
 import           Data.Finite                        (Finite)
 import qualified Data.List as List                  (minimumBy)

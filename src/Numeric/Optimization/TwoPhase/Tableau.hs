@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
-module Numeric.LinearProgramming.TwoPhase.Tableau
+module Numeric.Optimization.TwoPhase.Tableau
     ( -- * Tableaus
       Tableau(..)
     , IsTableau
@@ -15,7 +15,7 @@ module Numeric.LinearProgramming.TwoPhase.Tableau
     , mkPhaseII
       -- * Operations on Tableaus
     , tableauOptimal
-    , tableauResult
+    , tableauVars
     , tableauStep
     ) where
 
@@ -25,11 +25,11 @@ import           GHC.TypeLits
 import qualified Numeric.LinearAlgebra as LA
 import           Numeric.LinearAlgebra.Static as LS
 
-import           Numeric.LinearProgramming.Problem
-import           Numeric.LinearProgramming.TwoPhase.Builder
-import           Numeric.LinearProgramming.TwoPhase.Pivot
-import           Numeric.LinearProgramming.TwoPhase.Types
-import           Numeric.LinearProgramming.TwoPhase.VarMap
+import           Numeric.Optimization.Problem
+import           Numeric.Optimization.TwoPhase.Builder
+import           Numeric.Optimization.TwoPhase.Pivot
+import           Numeric.Optimization.TwoPhase.Types
+import           Numeric.Optimization.TwoPhase.VarMap
 
 
 type IsTableau p v s a =
@@ -74,7 +74,7 @@ tableauStep
     :: (IsTableau p v s a)
     => (VarName -> Bool)
     -> Tableau p v s a
-    -> Either TwoPhaseError (Tableau p v s a)
+    -> Either TwoPhaseStop (Tableau p v s a)
 tableauStep f (Tableau vs x) = do
     enter <- tryOr Optimal $ enteringFrom colChoices x
     leave <- tryOr Unbounded $ leavingFrom enter rowChoices x
@@ -102,16 +102,16 @@ readValue n (Tableau vs x)
         error "readValue: Variable not in tableau"
 
 
-tableauResult
+tableauVars
     :: (IsTableau p v s a)
     => Tableau p v s a
-    -> TwoPhaseResult v
-tableauResult t@(Tableau vs _) =
-    TwoPhaseResult . Vec.zip names $ Vec.map (`readValue` t) names
+    -> TwoPhaseVars v
+tableauVars t@(Tableau vs _) =
+    TwoPhaseVars . Vec.zip names $ Vec.map (`readValue` t) names
   where
-    names           = fromJust . Vec.fromList $ findColumns isResultVar vs
-    isResultVar n   = isDecision n || n == currentObj
-    currentObj      = indexColumns 0 vs
+    names       = fromJust . Vec.fromList $ findColumns isVar vs
+    isVar n     = isDecision n || n == currentObj
+    currentObj  = indexColumns 0 vs
 
 
 -- A tableau is at it's optimal solution if all coefficients

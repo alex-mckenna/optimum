@@ -6,17 +6,17 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
-module Numeric.LinearProgramming.TwoPhase
+module Numeric.Optimization.TwoPhase
     ( -- * Two-Phase Simplex
       TwoPhase
     , twoPhase
     ) where
 
 
-import Numeric.LinearProgramming.Problem                (Problem)
-import Numeric.LinearProgramming.Solver.Class
-import Numeric.LinearProgramming.TwoPhase.Tableau
-import Numeric.LinearProgramming.TwoPhase.Types
+import Numeric.Optimization.Problem            (Problem)
+import Numeric.Optimization.Solver.Class       (Solver(..))
+import Numeric.Optimization.TwoPhase.Tableau
+import Numeric.Optimization.TwoPhase.Types
 
 
 type IsTwoPhase v s a =
@@ -34,8 +34,8 @@ instance (IsTwoPhase v s a) => Show (TwoPhase v s a) where
 
 
 instance (IsTwoPhase v s a) => Solver (TwoPhase v s a) where
-    type Error  (TwoPhase v s a)  = TwoPhaseError
-    type Result (TwoPhase v s a)  = TwoPhaseResult v
+    type Stop (TwoPhase v s a) = TwoPhaseStop
+    type Vars (TwoPhase v s a) = TwoPhaseVars v
 
     isOptimal   = twoPhaseOptimal
     toResult    = twoPhaseResult
@@ -63,14 +63,14 @@ twoPhaseOptimal (TableauII x) = tableauOptimal x
 
 
 twoPhaseResult :: (IsTwoPhase v s a)
-    => TwoPhase v s a -> TwoPhaseResult v
-twoPhaseResult (TableauI  x)  = tableauResult x
-twoPhaseResult (TableauII x)  = tableauResult x
+    => TwoPhase v s a -> TwoPhaseVars v
+twoPhaseResult (TableauI  x)  = tableauVars x
+twoPhaseResult (TableauII x)  = tableauVars x
 
 
 twoPhaseStep :: (IsTwoPhase v s a)
     => TwoPhase v s a
-    -> Either TwoPhaseError (TwoPhase v s a)
+    -> Either TwoPhaseStop (TwoPhase v s a)
 twoPhaseStep state = case state of
     TableauI  x
         | tableauOptimal x  -> fmap TableauII . stepII $ mkPhaseII x

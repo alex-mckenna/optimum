@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeOperators          #-}
 
-module Numeric.LinearProgramming.TwoPhase.Builder
+module Numeric.Optimization.TwoPhase.Builder
     ( -- Building Tableaus
       mkBuilder
     , toMatrix
@@ -29,9 +29,9 @@ import           Numeric.LinearAlgebra.Static               (L)
 import qualified Numeric.LinearAlgebra.Static as LS
 import qualified Numeric.LinearAlgebra.Static.Vector as LS
 
-import           Numeric.LinearProgramming.Problem
-import           Numeric.LinearProgramming.TwoPhase.Types
-import           Numeric.LinearProgramming.TwoPhase.VarMap
+import           Numeric.Optimization.Problem
+import           Numeric.Optimization.TwoPhase.Types
+import           Numeric.Optimization.TwoPhase.VarMap
 
 
 type IsBuilder v s a =

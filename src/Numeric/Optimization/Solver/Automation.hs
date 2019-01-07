@@ -3,14 +3,14 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 
-module Numeric.LinearProgramming.Solver.Automation where
+module Numeric.Optimization.Solver.Automation where
 
 import Prelude hiding                           (id, (.))
 
 import Control.Arrow
 import Control.Category
 
-import Numeric.LinearProgramming.Solver.Class
+import Numeric.Optimization.Solver.Class
 
 
 -- Solving a linear programming problem with a given method is performed by
@@ -71,11 +71,11 @@ instance ArrowLoop (Optimization e) where
             pure (y, a')
 
 
-advance :: (Solver method) => Optimization (Error method) method method
+advance :: (Solver method) => Optimization (Stop method) method method
 advance = Optimization $ \x -> (step x, advance)
 
 
-advance' :: (Solver method) => Optimization (Error method) method (Result method)
+advance' :: (Solver method) => Optimization (Stop method) method (Vars method)
 advance' = proc state -> do
     rec
         let output  = if done then current else toResult next
@@ -88,9 +88,9 @@ advance' = proc state -> do
 
 
 solver :: forall method. (Solver method)
-    => Optimization (Error method) method (Result method)
+    => Optimization (Stop method) method (Vars method)
 solver = loop f >>> arr toResult
   where
-    f :: Optimization (Error method) (method, method) (method, method)
+    f :: Optimization (Stop method) (method, method) (method, method)
     f = undefined
 
