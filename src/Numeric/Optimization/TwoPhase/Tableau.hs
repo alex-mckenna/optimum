@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE KindSignatures         #-}
-{-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
@@ -19,7 +18,10 @@ module Numeric.Optimization.TwoPhase.Tableau
     , tableauStep
     ) where
 
+import           Data.Finite                            (Finite)
+import qualified Data.List as List
 import           Data.Maybe
+import           Data.Ord                               (comparing)
 import qualified Data.Vector.Sized as Vec
 import           GHC.TypeLits
 import qualified Numeric.LinearAlgebra as LA
@@ -54,6 +56,8 @@ instance (IsTableau p v s a) => Show (Tableau p v s a) where
     show = LA.dispf 1 . LS.unwrap . table
 
 
+-- Constructing Tableaus
+
 mkPhaseI
     :: (IsTableau 'PhaseI v s a)
     => Problem v s a
@@ -61,7 +65,7 @@ mkPhaseI
 mkPhaseI problem =
     case toTableau $ mkBuilder problem of
         Just tableau    -> tableau
-        Nothing         -> error "mkPhaseI: Failed to create tableau"
+        Nothing         -> error "mkPhaseI: Builder returned bad data"
   where
     toTableau b = Tableau <$> toVarMap b <*> toMatrix b
 
@@ -70,23 +74,24 @@ mkPhaseII :: Tableau 'PhaseI v s a -> Tableau 'PhaseII v s a
 mkPhaseII = undefined
 
 
-tableauStep
+-- Checking Optimality
+
+-- A tableau is at it's optimal solution if all coefficients in the objective
+-- row are non-negative. This includes slack and artificial columns - but
+-- not special columns (scale, RHS).
+--
+tableauOptimal
     :: (IsTableau p v s a)
-    => (VarName -> Bool)
-    -> Tableau p v s a
-    -> Either TwoPhaseStop (Tableau p v s a)
-tableauStep f (Tableau vs x) = do
-    enter <- tryOr Optimal $ enteringFrom colChoices x
-    leave <- tryOr Unbounded $ leavingFrom enter rowChoices x
-
-    let cell = (leave, enter)
-
-    pure $ Tableau (updateRow cell vs) (pivot cell x)
+    => Tableau p v s a
+    -> Bool
+tableauOptimal (Tableau vs x) =
+    allCells (>= 0) coeffCells x
   where
-    tryOr e     = maybe (Left e) Right
-    colChoices  = findIndicesColumns f vs
-    rowChoices  = allRows vs
+    coeffCells  = [(0, j) | j <- findIndicesColumns isCoeff vs]
+    isCoeff     = not . isSpecial
 
+
+-- Extracting Results
 
 readValue
     :: (IsTableau p v s a)
@@ -106,24 +111,66 @@ tableauVars
     :: (IsTableau p v s a)
     => Tableau p v s a
     -> TwoPhaseVars v
-tableauVars t@(Tableau vs _) =
-    TwoPhaseVars . Vec.zip names $ Vec.map (`readValue` t) names
+tableauVars t@(Tableau vs x) =
+    TwoPhaseVars . Vec.zip names $ Vec.map toValue names
   where
+    toValue i   = readValue i t / index (0, 0) x
     names       = fromJust . Vec.fromList $ findColumns isVar vs
+
     isVar n     = isDecision n || n == currentObj
     currentObj  = indexColumns 0 vs
 
 
--- A tableau is at it's optimal solution if all coefficients
--- in the objective row are non-negative.
---
-tableauOptimal
-    :: (IsTableau p v s a)
-    => Tableau p v s a
-    -> Bool
-tableauOptimal (Tableau vs x) =
-    allCells (>= 0) coeffCells x
+-- Stepping
+
+enteringVar
+    :: (IsTableau p v s a, cols ~ Cols p v s a)
+    => (VarName -> Bool)
+    -> Tableau p v s a
+    -> Either TwoPhaseStop (Finite cols)
+enteringVar canEnter (Tableau vs x) =
+    case filter isViable columns of
+        [] -> Left NoEntering
+        xs -> Right . fst $ List.minimumBy (comparing snd) xs
   where
-    coeffCells  = (0,) <$> findIndicesColumns isCoeff vs
-    isCoeff n   = isDecision n || isSlack n
+    columns         = Vec.toList . Vec.indexed $ columnVars vs
+    isViable (j, n) = index (0, j) x < 0 && canEnter n
+
+
+leavingVar
+    :: (IsTableau p v s a, cols ~ Cols p v s a, rows ~ Rows p s a)
+    => Finite cols
+    -> Tableau p v s a
+    -> Either TwoPhaseStop (Finite rows)
+leavingVar enter (Tableau vs x) =
+    case fmap toRatio $ filter isViable rows of
+        [] -> Left Unbounded
+        xs -> Right . fst $ List.minimumBy (comparing snd) xs
+  where
+    rows            = Vec.toList . Vec.indexed $ rowVars vs
+    rhsColumn       = fromJust $ elemIndexColumns RHS vs
+
+    toRatio (i, _)  =
+        let val = index (i, enter) x
+            rhs = index (i, rhsColumn) x
+        in  (i, rhs / val)
+
+    isViable (i, _) =
+        let val = index (i, enter) x
+            rhs = index (i, rhsColumn) x
+        in  val /= 0 && signum val == signum rhs
+
+
+tableauStep
+    :: (IsTableau p v s a)
+    => (VarName -> Bool)
+    -> Tableau p v s a
+    -> Either TwoPhaseStop (Tableau p v s a)
+tableauStep f t@(Tableau vs x) = do
+    enter <- enteringVar f t
+    leave <- leavingVar enter t
+
+    let cell = (leave, enter)
+
+    pure $ Tableau (updateRow cell vs) (pivot cell x)
 

@@ -7,13 +7,11 @@ module Numeric.Optimization.TwoPhase.VarMap
       VarMap(..)
     , IsVarMap
       -- * Columns
-    , allColumns
     , indexColumns
     , findColumns
     , findIndicesColumns
     , elemIndexColumns
       -- * Rows
-    , allRows
     , indexRows
     , elemIndexRows
     , updateRow
@@ -38,14 +36,6 @@ data VarMap (p :: Phase) (rows :: Nat) (cols :: Nat)
         , columnVars :: Vector cols VarName
         }
     deriving (Eq, Show)
-
-
-allColumns
-    :: (IsVarMap rows cols)
-    => VarMap p rows cols
-    -> [Finite cols]
-allColumns =
-    Vec.toList . Vec.imap const . columnVars
 
 
 indexColumns
@@ -82,14 +72,6 @@ elemIndexColumns
     -> Maybe (Finite cols)
 elemIndexColumns n =
     Vec.elemIndex n . columnVars
-
-
-allRows
-    :: (IsVarMap rows cols)
-    => VarMap p rows cols
-    -> [Finite rows]
-allRows =
-    Vec.toList . Vec.imap const . rowVars
 
 
 indexRows

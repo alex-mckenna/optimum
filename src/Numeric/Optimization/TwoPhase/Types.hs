@@ -29,7 +29,7 @@ import Data.Vector.Sized    (Vector)
 data Phase
     = PhaseI
     | PhaseII
-    deriving (Eq)
+    deriving (Eq, Ord)
 
 instance Show Phase where
     show PhaseI  = "w"
@@ -54,7 +54,7 @@ data VarName
     | Slack Int
     | Artificial Int
     | RHS
-    deriving (Eq)
+    deriving (Eq, Ord)
 
 instance Show VarName where
     show (Objective p)          = show p
@@ -90,7 +90,7 @@ isArtificial _            = False
 data TwoPhaseStop
     = Infeasible
     | Unbounded
-    | Optimal
+    | NoEntering
     deriving (Eq, Show)
 
 

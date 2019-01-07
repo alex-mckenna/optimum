@@ -27,8 +27,10 @@ library:
 
   exposed-modules:
   - Numeric.Optimization
+  - Numeric.Optimization.Dummy
   - Numeric.Optimization.Problem
   - Numeric.Optimization.Solver
+  - Numeric.Optimization.Trace
   - Numeric.Optimization.TwoPhase
 
   dependencies:

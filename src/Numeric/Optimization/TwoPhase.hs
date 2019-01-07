@@ -9,12 +9,15 @@
 module Numeric.Optimization.TwoPhase
     ( -- * Two-Phase Simplex
       TwoPhase
+    , TwoPhaseStop
+    , TwoPhaseVars
     , twoPhase
     ) where
 
+import Data.Bifunctor                           (bimap)
 
-import Numeric.Optimization.Problem            (Problem)
-import Numeric.Optimization.Solver.Class       (Solver(..))
+import Numeric.Optimization.Problem             (Problem)
+import Numeric.Optimization.Solver.Class        (Solver(..))
 import Numeric.Optimization.TwoPhase.Tableau
 import Numeric.Optimization.TwoPhase.Types
 
@@ -75,10 +78,10 @@ twoPhaseStep :: (IsTwoPhase v s a)
 twoPhaseStep state = case state of
     TableauI  x
         | tableauOptimal x  -> fmap TableauII . stepII $ mkPhaseII x
-        | otherwise         -> fmap TableauI  $ stepI x
+        | otherwise         -> bimap (const Infeasible) TableauI  $ stepI x
 
     TableauII x             -> fmap TableauII $ stepII x
   where
-    stepI   = tableauStep (\n -> not $ isSpecial n)
-    stepII  = tableauStep (\n -> isDecision n || isSlack n)
+    stepI   = tableauStep (\n -> isDecision n || isSlack n)
+    stepII  = tableauStep (not . isSpecial)
 
