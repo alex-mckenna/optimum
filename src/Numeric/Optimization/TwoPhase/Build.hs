@@ -122,7 +122,7 @@ buildGEQ acc@Builder{..} xs rhs = acc
     }
   where
     coeffs      = SVec.replicate 0 ++ SVec.map negate xs
-    slack       = SVec.map negate $ head slackSupply
+    slack       = head slackSupply
     artificial  = head artificialSupply
 
 

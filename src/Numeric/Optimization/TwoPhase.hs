@@ -14,8 +14,6 @@ module Numeric.Optimization.TwoPhase
     , twoPhase
     ) where
 
-import Data.Bifunctor                           (bimap)
-
 import Numeric.Optimization.Problem             (Problem)
 import Numeric.Optimization.Solver.Class        (Solver(..))
 import Numeric.Optimization.TwoPhase.Tableau
@@ -63,7 +61,7 @@ twoPhase = TableauI . mkPhaseI
 twoPhaseOptimal :: (IsTwoPhase v s a c)
     => TwoPhase v s a c -> Bool
 twoPhaseOptimal (TableauI  _) = False
-twoPhaseOptimal (TableauII x) = tableauOptimal x
+twoPhaseOptimal (TableauII x) = tableauOptimalPhaseII x
 
 
 twoPhaseResult :: (IsTwoPhase v s a c)
@@ -77,11 +75,11 @@ twoPhaseStep :: (IsTwoPhase v s a c)
     -> Either TwoPhaseStop (TwoPhase v s a c)
 twoPhaseStep state = case state of
     TableauI  x
-        | tableauOptimal x  -> fmap TableauII . stepII $ mkPhaseII x
-        | otherwise         -> bimap (const Infeasible) TableauI  $ stepI x
+        | tableauOptimalPhaseI x    -> fmap TableauII . stepII $ mkPhaseII x
+        | otherwise                 -> fmap TableauI  $ stepI x
 
-    TableauII x             -> fmap TableauII $ stepII x
+    TableauII x                     -> fmap TableauII $ stepII x
   where
-    stepI   = tableauStep (\n -> isDecision n || isSlack n)
-    stepII  = tableauStep (not . isSpecial)
+    stepI   = tableauStep canEnterPhaseI
+    stepII  = tableauStep canEnterPhaseII
 

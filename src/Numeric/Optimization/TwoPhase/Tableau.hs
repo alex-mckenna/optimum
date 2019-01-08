@@ -3,6 +3,8 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE GADTs                  #-}
 {-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
@@ -12,10 +14,15 @@ module Numeric.Optimization.TwoPhase.Tableau
     , IsTableau
     , mkPhaseI
     , mkPhaseII
+    , canEnterPhaseI
+    , canEnterPhaseII
       -- * Operations on Tableaus
-    , tableauOptimal
+    , tableauOptimalPhaseI
+    , tableauOptimalPhaseII
     , tableauVars
     , tableauStep
+      -- * TODO: DELETE THESE
+    , p2Columns
     ) where
 
 import           Data.Finite                            (Finite)
@@ -24,9 +31,11 @@ import           Data.Maybe
 import           Data.Ord                               (comparing)
 import qualified Data.Vector.Sized as Vec
 import           GHC.TypeLits
+import           Numeric.LinearAlgebra                  (Extractor(..), idxs, (??))
 import qualified Numeric.LinearAlgebra as LA
 import           Numeric.LinearAlgebra.Static           (L)
 import qualified Numeric.LinearAlgebra.Static as LS
+import           Unsafe.Coerce
 
 import           Numeric.Optimization.Problem
 import           Numeric.Optimization.TwoPhase.Build
@@ -59,29 +68,60 @@ instance (IsTableau p v s a c) => Show (Tableau p v s a c) where
 
 -- Constructing Tableaus
 
-mkPhaseI
-    :: (IsTableau 'PhaseI v s a c)
-    => Problem v s a c
-    -> Tableau 'PhaseI v s a c
+mkPhaseI :: (IsTableau 'PhaseI v s a c)
+    => Problem v s a c -> Tableau 'PhaseI v s a c
 mkPhaseI problem =
     Tableau (mkVarMap problem) (build problem)
 
 
-mkPhaseII :: Tableau 'PhaseI v s a c -> Tableau 'PhaseII v s a c
-mkPhaseII = undefined
+mkPhaseII :: forall v s a c. (IsTableau 'PhaseI v s a c, IsTableau 'PhaseII v s a c)
+    => Tableau 'PhaseI v s a c -> Tableau 'PhaseII v s a c
+mkPhaseII (Tableau vs x) =
+    Tableau (VarMap newRows newColumns) newMatrix
+  where
+    newRows     = Vec.tail . unsafeCoerce $ rowVars vs
+
+    newColumns  = fromJust . Vec.fromList . filter isPhaseII . Vec.toList $ columnVars vs
+
+    newMatrix   =
+        let newElems = LS.unwrap x ?? (Drop 1, Pos (idxs indices))
+        in  fromJust $ LS.create newElems
+
+    indices     = fmap fromIntegral $ findIndicesColumns isPhaseII vs
+    isPhaseII n = n /= Objective PhaseI && not (isArtificial n)
+
+
+p2Columns
+    :: forall v s a c cols.
+        ( IsTableau 'PhaseI v s a c
+        , IsTableau 'PhaseII v s a c
+        , KnownNat cols
+        , cols ~ Cols 'PhaseII v s a
+        )
+    => Tableau 'PhaseI v s a c
+    -> Vec.Vector cols VarName
+p2Columns (Tableau vs _) =
+    Vec.backpermute (columnVars vs) indices
+  where
+    indices     = fromJust . Vec.fromListN @cols . fmap fromIntegral $ findIndicesColumns isPhaseII vs
+    isPhaseII n = n /= Objective PhaseI && not (isArtificial n)
 
 
 -- Checking Optimality
 
--- A tableau is at it's optimal solution if all coefficients in the objective
--- row are non-negative. This includes slack and artificial columns - but
--- not special columns (scale, RHS).
---
-tableauOptimal
-    :: (IsTableau p v s a c)
-    => Tableau p v s a c
-    -> Bool
-tableauOptimal (Tableau vs x) =
+
+tableauOptimalPhaseI :: (IsTableau 'PhaseI v s a c)
+    => Tableau 'PhaseI v s a c -> Bool
+tableauOptimalPhaseI (Tableau vs x) =
+    allCells (<= 0) coeffCells x
+  where
+    coeffCells  = [(0, j) | j <- findIndicesColumns isCoeff vs]
+    isCoeff     = not . isSpecial
+
+
+tableauOptimalPhaseII :: (IsTableau 'PhaseII v s a c)
+    => Tableau 'PhaseII v s a c -> Bool
+tableauOptimalPhaseII (Tableau vs x) =
     allCells (>= 0) coeffCells x
   where
     coeffCells  = [(0, j) | j <- findIndicesColumns isCoeff vs]
@@ -90,11 +130,8 @@ tableauOptimal (Tableau vs x) =
 
 -- Extracting Results
 
-readValue
-    :: (IsTableau p v s a c)
-    => VarName
-    -> Tableau p v s a c
-    -> Double
+readValue :: (IsTableau p v s a c)
+    => VarName -> Tableau p v s a c -> Double
 readValue n (Tableau vs x)
     | Vec.elem n (columnVars vs) =
         let mIx = (,) <$> elemIndexRows n vs <*> elemIndexColumns RHS vs
@@ -104,10 +141,8 @@ readValue n (Tableau vs x)
         error "readValue: Variable not in tableau"
 
 
-tableauVars
-    :: (IsTableau p v s a c)
-    => Tableau p v s a c
-    -> TwoPhaseVars v
+tableauVars :: (IsTableau p v s a c)
+    => Tableau p v s a c -> TwoPhaseVars v
 tableauVars t@(Tableau vs x) =
     TwoPhaseVars . Vec.zip names $ Vec.map toValue names
   where
@@ -120,25 +155,45 @@ tableauVars t@(Tableau vs x) =
 
 -- Stepping
 
+canEnterPhaseI
+    :: (IsTableau 'PhaseI v s a c)
+    => (Finite (Cols 'PhaseI v s a), VarName)
+    -> Tableau 'PhaseI v s a c
+    -> Bool
+canEnterPhaseI (j, n) (Tableau _ x) =
+    canEnterVar && isPositive
+  where
+    canEnterVar = isDecision n || isSlack n
+    isPositive  = index (0, j) x > 0
+
+
+canEnterPhaseII
+    :: (IsTableau 'PhaseII v s a c)
+    => (Finite (Cols 'PhaseII v s a), VarName)
+    -> Tableau 'PhaseII v s a c
+    -> Bool
+canEnterPhaseII (j, n) (Tableau _ x) =
+    canEnterVar && isNegative
+  where
+    canEnterVar = not $ isSpecial n
+    isNegative  = index (0, j) x < 0
+
+
 enteringVar
     :: (IsTableau p v s a c, cols ~ Cols p v s a)
-    => (VarName -> Bool)
+    => ((Finite cols, VarName) -> Tableau p v s a c -> Bool)
     -> Tableau p v s a c
     -> Either TwoPhaseStop (Finite cols)
-enteringVar canEnter (Tableau vs x) =
-    case filter isViable columns of
+enteringVar canEnter t@(Tableau vs _) =
+    case filter (`canEnter` t) columns of
         [] -> Left NoEntering
         xs -> Right . fst $ List.minimumBy (comparing snd) xs
   where
-    columns         = Vec.toList . Vec.indexed $ columnVars vs
-    isViable (j, n) = index (0, j) x < 0 && canEnter n
+    columns = Vec.toList . Vec.indexed $ columnVars vs
 
 
-leavingVar
-    :: (IsTableau p v s a c, cols ~ Cols p v s a, rows ~ Rows p c)
-    => Finite cols
-    -> Tableau p v s a c
-    -> Either TwoPhaseStop (Finite rows)
+leavingVar :: (IsTableau p v s a c, cols ~ Cols p v s a, rows ~ Rows p c)
+    => Finite cols -> Tableau p v s a c -> Either TwoPhaseStop (Finite rows)
 leavingVar enter (Tableau vs x) =
     case fmap toRatio $ filter isViable rows of
         [] -> Left Unbounded
@@ -155,12 +210,13 @@ leavingVar enter (Tableau vs x) =
     isViable (i, _) =
         let val = index (i, enter) x
             rhs = index (i, rhsColumn) x
-        in  val /= 0 && signum val == signum rhs
+            var = indexRows i vs
+        in  val > 0 && rhs /= 0 && not (isSpecial var)
 
 
 tableauStep
-    :: (IsTableau p v s a c)
-    => (VarName -> Bool)
+    :: (IsTableau p v s a c, cols ~ Cols p v s a)
+    => ((Finite cols, VarName) -> Tableau p v s a c -> Bool)
     -> Tableau p v s a c
     -> Either TwoPhaseStop (Tableau p v s a c)
 tableauStep f t@(Tableau vs x) = do

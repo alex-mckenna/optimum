@@ -43,7 +43,7 @@ type family Rows p c :: Nat where
 
 type family Cols p v s a :: Nat where
     Cols 'PhaseI  v s a = 2 + v + s + a + 1
-    Cols 'PhaseII v s a = 1 + v + s + a + 1
+    Cols 'PhaseII v s a = 1 + v + s + 1
 
 
 -- Variable Names
