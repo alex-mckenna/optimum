@@ -18,8 +18,8 @@ type IsSolver a =
 
 solveWith
     :: (IsSolver method)
-    => (Problem v s a -> method)
-    -> Problem v s a
+    => (Problem v s a c -> method)
+    -> Problem v s a c
     -> Either (Stop method) (Vars method)
 solveWith mkSolver problem =
     go $ mkSolver problem

@@ -25,52 +25,49 @@ import           Data.Ord                               (comparing)
 import qualified Data.Vector.Sized as Vec
 import           GHC.TypeLits
 import qualified Numeric.LinearAlgebra as LA
-import           Numeric.LinearAlgebra.Static as LS
+import           Numeric.LinearAlgebra.Static           (L)
+import qualified Numeric.LinearAlgebra.Static as LS
 
 import           Numeric.Optimization.Problem
-import           Numeric.Optimization.TwoPhase.Builder
+import           Numeric.Optimization.TwoPhase.Build
 import           Numeric.Optimization.TwoPhase.Pivot
 import           Numeric.Optimization.TwoPhase.Types
 import           Numeric.Optimization.TwoPhase.VarMap
 
 
-type IsTableau p v s a =
+type IsTableau p v s a c =
     ( KnownNat v
     , KnownNat s
     , KnownNat a
+    , KnownNat c
     , KnownNat (v + 1)
-    , KnownNat (s + a)
-    , KnownNat (((2 + v) + (s + a)) + 2)
-    , KnownNat (Rows p s a)
+    , KnownNat (Rows p c)
     , KnownNat (Cols p v s a)
+    , IsBuilder v s a c
     )
 
 
-data Tableau (p :: Phase) (v :: Nat) (s :: Nat) (a :: Nat)
+data Tableau (p :: Phase) (v :: Nat) (s :: Nat) (a :: Nat) (c :: Nat)
     = Tableau
-        { varMap :: VarMap p (Rows p s a) (Cols p v s a)
-        , table  :: L (Rows p s a) (Cols p v s a)
+        { varMap :: VarMap p (Rows p c) (Cols p v s a)
+        , table  :: L (Rows p c) (Cols p v s a)
         }
 
-instance (IsTableau p v s a) => Show (Tableau p v s a) where
+instance (IsTableau p v s a c) => Show (Tableau p v s a c) where
     show = LA.dispf 1 . LS.unwrap . table
 
 
 -- Constructing Tableaus
 
 mkPhaseI
-    :: (IsTableau 'PhaseI v s a)
-    => Problem v s a
-    -> Tableau 'PhaseI v s a
+    :: (IsTableau 'PhaseI v s a c)
+    => Problem v s a c
+    -> Tableau 'PhaseI v s a c
 mkPhaseI problem =
-    case toTableau $ mkBuilder problem of
-        Just tableau    -> tableau
-        Nothing         -> error "mkPhaseI: Builder returned bad data"
-  where
-    toTableau b = Tableau <$> toVarMap b <*> toMatrix b
+    Tableau (mkVarMap problem) (build problem)
 
 
-mkPhaseII :: Tableau 'PhaseI v s a -> Tableau 'PhaseII v s a
+mkPhaseII :: Tableau 'PhaseI v s a c -> Tableau 'PhaseII v s a c
 mkPhaseII = undefined
 
 
@@ -81,8 +78,8 @@ mkPhaseII = undefined
 -- not special columns (scale, RHS).
 --
 tableauOptimal
-    :: (IsTableau p v s a)
-    => Tableau p v s a
+    :: (IsTableau p v s a c)
+    => Tableau p v s a c
     -> Bool
 tableauOptimal (Tableau vs x) =
     allCells (>= 0) coeffCells x
@@ -94,9 +91,9 @@ tableauOptimal (Tableau vs x) =
 -- Extracting Results
 
 readValue
-    :: (IsTableau p v s a)
+    :: (IsTableau p v s a c)
     => VarName
-    -> Tableau p v s a
+    -> Tableau p v s a c
     -> Double
 readValue n (Tableau vs x)
     | Vec.elem n (columnVars vs) =
@@ -108,8 +105,8 @@ readValue n (Tableau vs x)
 
 
 tableauVars
-    :: (IsTableau p v s a)
-    => Tableau p v s a
+    :: (IsTableau p v s a c)
+    => Tableau p v s a c
     -> TwoPhaseVars v
 tableauVars t@(Tableau vs x) =
     TwoPhaseVars . Vec.zip names $ Vec.map toValue names
@@ -124,9 +121,9 @@ tableauVars t@(Tableau vs x) =
 -- Stepping
 
 enteringVar
-    :: (IsTableau p v s a, cols ~ Cols p v s a)
+    :: (IsTableau p v s a c, cols ~ Cols p v s a)
     => (VarName -> Bool)
-    -> Tableau p v s a
+    -> Tableau p v s a c
     -> Either TwoPhaseStop (Finite cols)
 enteringVar canEnter (Tableau vs x) =
     case filter isViable columns of
@@ -138,9 +135,9 @@ enteringVar canEnter (Tableau vs x) =
 
 
 leavingVar
-    :: (IsTableau p v s a, cols ~ Cols p v s a, rows ~ Rows p s a)
+    :: (IsTableau p v s a c, cols ~ Cols p v s a, rows ~ Rows p c)
     => Finite cols
-    -> Tableau p v s a
+    -> Tableau p v s a c
     -> Either TwoPhaseStop (Finite rows)
 leavingVar enter (Tableau vs x) =
     case fmap toRatio $ filter isViable rows of
@@ -162,10 +159,10 @@ leavingVar enter (Tableau vs x) =
 
 
 tableauStep
-    :: (IsTableau p v s a)
+    :: (IsTableau p v s a c)
     => (VarName -> Bool)
-    -> Tableau p v s a
-    -> Either TwoPhaseStop (Tableau p v s a)
+    -> Tableau p v s a c
+    -> Either TwoPhaseStop (Tableau p v s a c)
 tableauStep f t@(Tableau vs x) = do
     enter <- enteringVar f t
     leave <- leavingVar enter t

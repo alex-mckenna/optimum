@@ -36,14 +36,14 @@ instance Show Phase where
     show PhaseII = "z"
 
 
-type family Rows (p :: Phase) (s :: Nat) (a :: Nat) :: Nat where
-    Rows 'PhaseI  s a = 2 + s + a
-    Rows 'PhaseII s a = 1 + s + a
+type family Rows p c :: Nat where
+    Rows 'PhaseI  c = 2 + c
+    Rows 'PhaseII c = 1 + c
 
 
-type family Cols (p :: Phase) (v :: Nat) (s :: Nat) (a :: Nat) :: Nat where
-    Cols 'PhaseI  v s a = 2 + v + s + a + 2
-    Cols 'PhaseII v s a = 1 + v + s + a + 2
+type family Cols p v s a :: Nat where
+    Cols 'PhaseI  v s a = 2 + v + s + a + 1
+    Cols 'PhaseII v s a = 1 + v + s + a + 1
 
 
 -- Variable Names

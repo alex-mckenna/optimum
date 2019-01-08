@@ -1,11 +1,15 @@
-{-# LANGUAGE ConstraintKinds    #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE KindSignatures     #-}
+{-# LANGUAGE ConstraintKinds        #-}
+{-# LANGUAGE DataKinds              #-}
+{-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE KindSignatures         #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeApplications       #-}
 
 module Numeric.Optimization.TwoPhase.VarMap
     ( -- * Variable Maps
       VarMap(..)
     , IsVarMap
+    , mkVarMap
       -- * Columns
     , indexColumns
     , findColumns
@@ -17,12 +21,17 @@ module Numeric.Optimization.TwoPhase.VarMap
     , updateRow
     ) where
 
-import           Data.Finite                                (Finite)
-import qualified Data.List as List
-import           Data.Vector.Sized                          (Vector, (//))
-import qualified Data.Vector.Sized as Vec
-import           GHC.TypeLits                               (KnownNat, Nat)
+import           Prelude hiding                         ((++))
 
+import           Data.Finite                            (Finite)
+import qualified Data.List as List
+import           Data.Maybe                             (fromJust)
+import           Data.Proxy
+import           Data.Vector.Sized                      (Vector, (++), (//))
+import qualified Data.Vector.Sized as Vec
+import           GHC.TypeLits
+
+import           Numeric.Optimization.Problem
 import           Numeric.Optimization.TwoPhase.Types
 
 
@@ -36,6 +45,38 @@ data VarMap (p :: Phase) (rows :: Nat) (cols :: Nat)
         , columnVars :: Vector cols VarName
         }
     deriving (Eq, Show)
+
+
+mkVarMap
+    :: forall v s a c rows cols.
+        ( KnownNat v
+        , KnownNat s
+        , KnownNat a
+        , KnownNat c
+        , KnownNat rows
+        , KnownNat cols
+        , rows ~ Rows 'PhaseI c
+        , cols ~ Cols 'PhaseI v s a
+        )
+    => Problem v s a c
+    -> VarMap 'PhaseI rows cols
+mkVarMap =
+    flip VarMap cols . fromJust . Vec.fromList . go []
+  where
+    cols        = Vec.snoc (obj ++ decision ++ slack ++ artificial) RHS
+    obj         = Vec.fromTuple (Objective PhaseI, Objective PhaseII)
+    decision    = Vec.generate @v (Decision . fromIntegral)
+    slack       = Vec.generate @s (Slack . fromIntegral)
+    artificial  = Vec.generate @a (Artificial . fromIntegral)
+
+    go :: forall x y z. [VarName] -> Problem v x y z -> [VarName]
+    go acc (Maximize _)   = Objective PhaseI : Objective PhaseII : acc
+    go acc (SuchThat p c) = case c of
+        (_:=_)  -> go (lastArtificial : acc) p
+        _       -> go (lastSlack : acc) p
+      where
+        lastSlack       = Slack . fromIntegral . pred . natVal $ Proxy @x
+        lastArtificial  = Artificial . fromIntegral . pred . natVal $ Proxy @y
 
 
 indexColumns

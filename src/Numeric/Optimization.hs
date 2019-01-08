@@ -1,6 +1,20 @@
+{-# LANGUAGE PatternSynonyms #-}
+
 module Numeric.Optimization
-    ( -- * Problems and Solvers
-      Problem(..)
+    ( -- * Problems
+      Problem
+    , maximize
+    , minimize
+    , suchThat
+    , leq
+    , geq
+    , equ
+    , pattern Maximize
+    , pattern SuchThat
+    , pattern (:<)
+    , pattern (:>)
+    , pattern (:=)
+      -- * Solvers
     , Solver(..)
     , solveWith
     ) where

@@ -22,24 +22,24 @@ import Numeric.Optimization.TwoPhase.Tableau
 import Numeric.Optimization.TwoPhase.Types
 
 
-type IsTwoPhase v s a =
-    (IsTableau 'PhaseI v s a, IsTableau 'PhaseII v s a)
+type IsTwoPhase v s a c =
+    (IsTableau 'PhaseI v s a c, IsTableau 'PhaseII v s a c)
 
 
-data TwoPhase v s a
-    = TableauI  (Tableau 'PhaseI v s a)
-    | TableauII (Tableau 'PhaseII v s a)
+data TwoPhase v s a c
+    = TableauI  (Tableau 'PhaseI v s a c)
+    | TableauII (Tableau 'PhaseII v s a c)
 
 
-instance (IsTwoPhase v s a) => Show (TwoPhase v s a) where
+instance (IsTwoPhase v s a c) => Show (TwoPhase v s a c) where
     show (TableauI  x) = show x
     show (TableauII x) = show x
 
 
-instance (IsTwoPhase v s a) => Solver (TwoPhase v s a) where
-    type CanSolve (TwoPhase v s a) = IsTwoPhase v s a
-    type Stop     (TwoPhase v s a) = TwoPhaseStop
-    type Vars     (TwoPhase v s a) = TwoPhaseVars v
+instance (IsTwoPhase v s a c) => Solver (TwoPhase v s a c) where
+    type CanSolve (TwoPhase v s a c) = IsTwoPhase v s a c
+    type Stop     (TwoPhase v s a c) = TwoPhaseStop
+    type Vars     (TwoPhase v s a c) = TwoPhaseVars v
 
     isOptimal   = twoPhaseOptimal
     toResult    = twoPhaseResult
@@ -51,8 +51,8 @@ instance (IsTwoPhase v s a) => Solver (TwoPhase v s a) where
 -- basic feasible solution (or identify infeasibility), then solves the initial
 -- problem using the obtained solution.
 --
-twoPhase :: (IsTwoPhase v s a)
-    => Problem v s a -> TwoPhase v s a
+twoPhase :: (IsTwoPhase v s a c)
+    => Problem v s a c -> TwoPhase v s a c
 twoPhase = TableauI . mkPhaseI
 
 
@@ -60,21 +60,21 @@ twoPhase = TableauI . mkPhaseI
 -- be reported as optimal. This is because it is not guaranteed to find an
 -- optimal solution to the problem being optimized, only an initial BFS.
 --
-twoPhaseOptimal :: (IsTwoPhase v s a)
-    => TwoPhase v s a -> Bool
+twoPhaseOptimal :: (IsTwoPhase v s a c)
+    => TwoPhase v s a c -> Bool
 twoPhaseOptimal (TableauI  _) = False
 twoPhaseOptimal (TableauII x) = tableauOptimal x
 
 
-twoPhaseResult :: (IsTwoPhase v s a)
-    => TwoPhase v s a -> TwoPhaseVars v
+twoPhaseResult :: (IsTwoPhase v s a c)
+    => TwoPhase v s a c -> TwoPhaseVars v
 twoPhaseResult (TableauI  x)  = tableauVars x
 twoPhaseResult (TableauII x)  = tableauVars x
 
 
-twoPhaseStep :: (IsTwoPhase v s a)
-    => TwoPhase v s a
-    -> Either TwoPhaseStop (TwoPhase v s a)
+twoPhaseStep :: (IsTwoPhase v s a c)
+    => TwoPhase v s a c
+    -> Either TwoPhaseStop (TwoPhase v s a c)
 twoPhaseStep state = case state of
     TableauI  x
         | tableauOptimal x  -> fmap TableauII . stepII $ mkPhaseII x
