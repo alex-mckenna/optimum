@@ -36,8 +36,7 @@ library:
   - finite-typelits
   - hmatrix
   - hmatrix-vector-sized
-  - mtl
-  - vector
+  - indexed-list-literals
   - vector-sized
 
 
@@ -47,5 +46,4 @@ executables:
 
     dependencies:
     - optimum
-    - vector-sized
 

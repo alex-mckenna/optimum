@@ -17,12 +17,11 @@ module Numeric.Optimization.TwoPhase.Tableau
     , canEnterPhaseI
     , canEnterPhaseII
       -- * Operations on Tableaus
+    , tableauInfeasible
     , tableauOptimalPhaseI
     , tableauOptimalPhaseII
     , tableauVars
     , tableauStep
-      -- * TODO: DELETE THESE
-    , p2Columns
     ) where
 
 import           Data.Finite                            (Finite)
@@ -35,6 +34,7 @@ import           Numeric.LinearAlgebra                  (Extractor(..), idxs, (?
 import qualified Numeric.LinearAlgebra as LA
 import           Numeric.LinearAlgebra.Static           (L)
 import qualified Numeric.LinearAlgebra.Static as LS
+import           Text.Printf
 import           Unsafe.Coerce
 
 import           Numeric.Optimization.Problem
@@ -62,8 +62,15 @@ data Tableau (p :: Phase) (v :: Nat) (s :: Nat) (a :: Nat) (c :: Nat)
         , table  :: L (Rows p c) (Cols p v s a)
         }
 
+
 instance (IsTableau p v s a c) => Show (Tableau p v s a c) where
-    show = LA.dispf 1 . LS.unwrap . table
+    show (Tableau vs x) = unlines (cols : rows)
+      where
+        cols    = concatMap (printf "%8s" . show) . Vec.toList $ columnVars vs
+        rows    = zipWith (printf "%s   %s") rowData rowName
+
+        rowData = lines . LA.format "" (printf "%8.2f") $ LS.unwrap x
+        rowName = fmap show . Vec.toList $ rowVars vs
 
 
 -- Constructing Tableaus
@@ -81,7 +88,9 @@ mkPhaseII (Tableau vs x) =
   where
     newRows     = Vec.tail . unsafeCoerce $ rowVars vs
 
-    newColumns  = fromJust . Vec.fromList . filter isPhaseII . Vec.toList $ columnVars vs
+    newColumns  =
+        let is = fromJust $ Vec.fromList indices
+        in  Vec.backpermute (columnVars vs) is
 
     newMatrix   =
         let newElems = LS.unwrap x ?? (Drop 1, Pos (idxs indices))
@@ -91,23 +100,15 @@ mkPhaseII (Tableau vs x) =
     isPhaseII n = n /= Objective PhaseI && not (isArtificial n)
 
 
-p2Columns
-    :: forall v s a c cols.
-        ( IsTableau 'PhaseI v s a c
-        , IsTableau 'PhaseII v s a c
-        , KnownNat cols
-        , cols ~ Cols 'PhaseII v s a
-        )
-    => Tableau 'PhaseI v s a c
-    -> Vec.Vector cols VarName
-p2Columns (Tableau vs _) =
-    Vec.backpermute (columnVars vs) indices
-  where
-    indices     = fromJust . Vec.fromListN @cols . fmap fromIntegral $ findIndicesColumns isPhaseII vs
-    isPhaseII n = n /= Objective PhaseI && not (isArtificial n)
-
-
 -- Checking Optimality
+
+
+tableauInfeasible :: (IsTableau 'PhaseI v s a c)
+    => Tableau 'PhaseI v s a c
+    -> Bool
+tableauInfeasible t
+    | tableauOptimalPhaseI t    = readValue RHS t /= 0
+    | otherwise                 = False
 
 
 tableauOptimalPhaseI :: (IsTableau 'PhaseI v s a c)

@@ -15,7 +15,9 @@ type IsTrace a =
 
 
 newtype Trace a = Trace { getSolver :: a }
-    deriving (Show)
+
+instance (Show a) => Show (Trace a) where
+    show = show . getSolver
 
 
 instance (IsTrace a) => Solver (Trace a) where
@@ -29,8 +31,9 @@ instance (IsTrace a) => Solver (Trace a) where
     toResult    =
         toResult . getSolver
 
-    step        =
-        trace "step = " . traceShowId . fmap Trace . step . getSolver
+    step x      = case step $ getSolver x of
+        Left err -> Left . trace "step = " $ traceShowId err
+        Right st -> Right . Trace . trace "step = " $ traceShowId st
 
 
 traceSolver :: (IsTrace a) => a -> Trace a

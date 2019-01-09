@@ -4,7 +4,6 @@ module Numeric.Optimization
     ( -- * Problems
       Problem
     , maximize
-    , minimize
     , suchThat
     , leq
     , geq

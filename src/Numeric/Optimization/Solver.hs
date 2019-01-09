@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeFamilies       #-}
 
 module Numeric.Optimization.Solver
-    ( -- * Solver Class
+    ( -- * Solver
       Solver(..)
     , IsSolver
     , solveWith

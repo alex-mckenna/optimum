@@ -16,7 +16,6 @@ module Numeric.Optimization.Problem
     , IsProblem
       -- * Smart Constructors
     , maximize
-    , minimize
     , suchThat
     , leq
     , geq
@@ -29,6 +28,7 @@ module Numeric.Optimization.Problem
     , pattern (:=)
     ) where
 
+import           Data.IndexedListLiterals           (IndexedListLiterals)
 import           Data.Kind                          (Type)
 import           Data.Vector.Storable.Sized         (Vector)
 import qualified Data.Vector.Storable.Sized as SVec
@@ -66,22 +66,25 @@ pattern (:=) :: Coeffs v -> Double -> Constraint v s a
 pattern xs := y <- EQU xs y
 
 
-leq :: Coeffs v -> Double -> Constraint v 1 0
+leq :: (KnownNat v, IndexedListLiterals input v Double)
+    => input -> Double -> Constraint v 1 0
 leq xs y
     | y < 0     = error "leq: RHS must be non-negative"
-    | otherwise = LEQ xs y
+    | otherwise = LEQ (SVec.fromTuple xs) y
 
 
-geq :: Coeffs v -> Double -> Constraint v 1 1
+geq :: (KnownNat v, IndexedListLiterals input v Double)
+    => input -> Double -> Constraint v 1 1
 geq xs y
     | y < 0     = error "geq: RHS must be non-negative"
-    | otherwise = GEQ xs y
+    | otherwise = GEQ (SVec.fromTuple xs) y
 
 
-equ :: Coeffs v -> Double -> Constraint v 0 1
+equ :: (KnownNat v, IndexedListLiterals input v Double)
+    => input -> Double -> Constraint v 0 1
 equ xs y
     | y < 0     = error "equ: RHS must be non-negative"
-    | otherwise = EQU xs y
+    | otherwise = EQU (SVec.fromTuple xs) y
 
 
 type IsProblem v s a c =
@@ -123,12 +126,9 @@ pattern SuchThat
 pattern SuchThat p c <- Constrained p c
 
 
-maximize :: (KnownNat v) => Coeffs v -> Problem v 0 0 0
-maximize = Optimize
-
-
-minimize :: (KnownNat v) => Coeffs v -> Problem v 0 0 0
-minimize = Optimize . SVec.map negate
+maximize :: (KnownNat v, IndexedListLiterals input v Double)
+    => input -> Problem v 0 0 0
+maximize = Optimize . SVec.fromTuple
 
 
 suchThat

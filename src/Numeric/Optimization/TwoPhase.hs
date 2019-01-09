@@ -75,6 +75,7 @@ twoPhaseStep :: (IsTwoPhase v s a c)
     -> Either TwoPhaseStop (TwoPhase v s a c)
 twoPhaseStep state = case state of
     TableauI  x
+        | tableauInfeasible x       -> Left Infeasible
         | tableauOptimalPhaseI x    -> fmap TableauII . stepII $ mkPhaseII x
         | otherwise                 -> fmap TableauI  $ stepI x
 
