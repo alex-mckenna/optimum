@@ -51,7 +51,7 @@ import Numeric.Optimization.TwoPhase
 
 -- This is a representation of the following problem:
 --
--- Maximise   2x1 + 3x2 + 4x3
+-- Maximize   2x1 + 3x2 + 4x3
 -- Such That  3x1 + 2x2 +  x3 <= 10
 --            2x1 + 5x2 + 3x3 <= 15
 --             x1 ,  x2 ,  x3 >= 0
@@ -63,8 +63,10 @@ import Numeric.Optimization.TwoPhase
 --   * artificial variables (introduced by GEQ or EQU constraints)
 --   * constraints
 --
+-- in the problem.
+--
 problem :: Problem 3 3 1 3
-problem = maximise (2, 3, 4)
+problem = maximize (2, 3, 4)
     `suchThat` leq (3, 2, 1) 10
     `suchThat` leq (2, 5, 3) 15
 
