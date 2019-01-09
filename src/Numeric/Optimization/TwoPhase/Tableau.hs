@@ -24,8 +24,6 @@ module Numeric.Optimization.TwoPhase.Tableau
     , tableauStep
     ) where
 
-import Debug.Trace
-
 import           Data.Finite                            (Finite)
 import qualified Data.List as List
 import           Data.Maybe
@@ -135,7 +133,7 @@ readValue :: (IsTableau p v s a c)
     => VarName -> Tableau p v s a c -> Double
 readValue n (Tableau vs x) =
     case (valRowIx, valColIx, rhsColIx) of
-        (Just i,  Just j, Just r) -> (traceShowId $ index (i, r) x) / (traceShowId $ index (i, j) x)
+        (Just i,  Just j, Just r) -> index (i, r) x / index (i, j) x
         (Nothing, Just _, Just _) -> 0
         _                         -> error "readValue: Variable not in tableau"
   where
@@ -146,10 +144,10 @@ readValue n (Tableau vs x) =
 
 tableauVars :: (IsTableau p v s a c)
     => Tableau p v s a c -> TwoPhaseVars v
-tableauVars t@(Tableau vs x) =
+tableauVars t@(Tableau vs _) =
     TwoPhaseVars . Vec.zip names $ Vec.map toValue names
   where
-    toValue i   = readValue i t / index (0, 0) x
+    toValue i   = readValue i t
     names       = fromJust . Vec.fromList $ findColumns isVar vs
 
     isVar n     = isDecision n || n == currentObj

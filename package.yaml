@@ -10,6 +10,7 @@ license:             MIT
 copyright:           2019 Alex McKenna
 
 ghc-options:
+- -fexcess-precision
 - -fhide-source-paths
 - -Wall
 - -Wcompat
