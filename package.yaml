@@ -27,7 +27,6 @@ library:
 
   exposed-modules:
   - Numeric.Optimization
-  - Numeric.Optimization.Dummy
   - Numeric.Optimization.Problem
   - Numeric.Optimization.Solver
   - Numeric.Optimization.Trace
@@ -37,6 +36,16 @@ library:
   - finite-typelits
   - hmatrix
   - hmatrix-vector-sized
+  - mtl
   - vector
   - vector-sized
+
+
+executables:
+  demo:
+    main: Main.hs
+
+    dependencies:
+    - optimum
+    - vector-sized
 
