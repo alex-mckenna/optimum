@@ -32,8 +32,13 @@ library:
   - Numeric.Optimization.Trace
   - Numeric.Optimization.TwoPhase
 
+  ghc-options:
+  - -fconstraint-solver-iterations=0
+  - -fplugin=GHC.TypeLits.KnownNat.Solver
+
   dependencies:
   - finite-typelits
+  - ghc-typelits-knownnat
   - hmatrix
   - hmatrix-vector-sized
   - indexed-list-literals

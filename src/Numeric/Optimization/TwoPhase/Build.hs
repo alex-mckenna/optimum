@@ -34,9 +34,6 @@ type IsBuilder v s a c =
     , KnownNat s
     , KnownNat a
     , KnownNat c
-    , KnownNat (2 + v)
-    , KnownNat (Rows 'PhaseI c)
-    , KnownNat (Cols 'PhaseI v s a)
     )
 
 
