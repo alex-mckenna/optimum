@@ -28,11 +28,9 @@ Currently there are some limitations in the library. These are either conscious
 choices to make implementation simpler, or limitations from libraries used /
 Haskell as a language. These are:
 
-  * All problems are currently expressed as maximisations. This is to prevent
-      the implementation of the two phase simplex from becoming any more
-      complicated than it needs to be. Minimisation problems can still be
-      expressed by multiplying every coefficient in the objective function by
-      -1, and multiplying the final value of the objective function by -1.
+  * Most matrix operations involve unwrapping to a dynamically sized matrix.
+      This is due to the `Numeric.LinearAlgebra.Static` module being rather
+      lackluster compared to the main API.
 
   * The interface exposed currently only accepts solvers which use pure
       functions. This means any solver in IO (such as those which need random
@@ -51,7 +49,7 @@ import Numeric.Optimization.TwoPhase
 
 -- This is a representation of the following problem:
 --
--- Maximize   2x1 + 3x2 + 4x3
+-- Minimize  -2x1 - 3x2 - 4x3
 -- Such That  3x1 + 2x2 +  x3 <= 10
 --            2x1 + 5x2 + 3x3 <= 15
 --             x1 ,  x2 ,  x3 >= 0
@@ -65,10 +63,10 @@ import Numeric.Optimization.TwoPhase
 --
 -- in the problem.
 --
-problem :: Problem 3 3 1 3
-problem = maximize (2, 3, 4)
-    `suchThat` leq (3, 2, 1) 10
-    `suchThat` leq (2, 5, 3) 15
+problem :: Problem 'Min 3 3 1 3
+problem = minimize (-2, -3, -4)
+    `suchThat` leq ( 3,  2,  1) 10
+    `suchThat` leq ( 2,  5,  3) 15
 
 
 -- Problems can be solved by any type which implements the Solver class. For
@@ -78,10 +76,9 @@ solution :: Either TwoPhaseError (TwoPhaseResult 3)
 solution = solveWith twoPhase problem
 
 -- Any type which has an instance for Solver, and Show instances for all
--- itself and any associated types can be traced. This outputs whether the
--- current solution is optimal, and the new state after each step.
+-- associated types can be traced. This outputs whether the current solution
+-- is optimal, and the new state after each step.
 --
 tracedSolution :: Either TwoPhaseError (TwoPhaseResult 3)
 tracedSolution = solveWith (traceSolver . twoPhase) problem
 ```
-
