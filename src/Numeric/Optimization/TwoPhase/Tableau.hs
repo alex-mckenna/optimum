@@ -25,20 +25,20 @@ module Numeric.Optimization.TwoPhase.Tableau
     , tableauStep
     ) where
 
-import           Data.Finite (Finite)
+import           Data.Finite                                    (Finite)
 import qualified Data.List as List
-import           Data.Maybe (fromJust)
-import           Data.Ord (comparing)
+import           Data.Maybe                                     (fromJust)
+import           Data.Ord                                       (comparing)
 import qualified Data.Vector.Sized as Vec
 import qualified Data.Vector.Storable.Sized as SVec
 import           GHC.TypeLits
-import           Numeric.LinearAlgebra (Extractor(..), (??))
+import           Numeric.LinearAlgebra                          (Extractor(..), (??))
 import qualified Numeric.LinearAlgebra as LA
-import           Numeric.LinearAlgebra.Static (L)
+import           Numeric.LinearAlgebra.Static                   (L)
 import qualified Numeric.LinearAlgebra.Static as LS
 import qualified Numeric.LinearAlgebra.Static.Vector as LS
-import           Text.Printf (printf)
-import           Unsafe.Coerce (unsafeCoerce)
+import           Text.Printf                                    (printf)
+import           Unsafe.Coerce                                  (unsafeCoerce)
 
 import           Numeric.Optimization.Problem
 import           Numeric.Optimization.TwoPhase.Tableau.Build
@@ -85,8 +85,10 @@ mkPhaseI x =
 
 mkPhaseII
     :: forall d v s a c.
-        (IsTableau 'PhaseI v s a c, IsTableau 'PhaseII v s a c)
-    => Tableau 'PhaseI d v s a c
+        ( IsTableau 'PhaseI  v s a c
+        , IsTableau 'PhaseII v s a c
+        )
+    => Tableau 'PhaseI  d v s a c
     -> Tableau 'PhaseII d v s a c
 mkPhaseII (Tableau vs x) =
     Tableau (VarMap newRows newColumns) newMatrix
@@ -110,8 +112,11 @@ mkPhaseII (Tableau vs x) =
 -- of that row divided by the value in the variable's column in that row. If
 -- the variable is not in the basis it has a value of 0 (non-basic).
 --
-readValue :: (IsTableau p v s a c)
-    => VarName -> Tableau p d v s a c -> Double
+readValue
+    :: (IsTableau p v s a c)
+    => VarName
+    -> Tableau p d v s a c
+    -> Double
 readValue n (Tableau vs x) =
     case (valRowIx, valColIx, rhsColIx) of
         (Just i,  Just j, Just r) -> index (i, r) x / index (i, j) x
@@ -130,9 +135,9 @@ readValue n (Tableau vs x) =
 tableauResult
     :: (IsTableau p v s a c)
     => Tableau p d v s a c
-    -> TwoPhaseVars d v
+    -> TwoPhaseResult d v
 tableauResult x =
-    TwoPhaseVars . Vec.zip names $ Vec.map toValue names
+    TwoPhaseResult . Vec.zip names $ Vec.map toValue names
   where
     toValue i   = readValue i x
     names       = fromJust . Vec.fromList . findColumns isVar $ varMap x
@@ -215,11 +220,11 @@ minimizeOptimal =
 -- is a maximization or a minimization.
 --
 enteringVar
-    :: (IsTableau p v s a c, cols ~ Cols p v s a)
-    => (Finite cols -> Bool)
+    :: (IsTableau p v s a c)
+    => (Finite (Cols p v s a) -> Bool)
     -> (VarName -> Bool)
     -> Tableau p d v s a c
-    -> Either TwoPhaseStop (Finite cols)
+    -> Either TwoPhaseError (Finite (Cols p v s a))
 enteringVar validCol validVar (Tableau vs _) =
     case filter canEnter columns of
         [] -> Left NoEntering
@@ -237,7 +242,7 @@ enteringVar validCol validVar (Tableau vs _) =
 phaseIEntering
     :: (IsTableau 'PhaseI v s a c)
     => Tableau 'PhaseI d v s a c
-    -> Either TwoPhaseStop (Finite (Cols 'PhaseI v s a))
+    -> Either TwoPhaseError (Finite (Cols 'PhaseI v s a))
 phaseIEntering x =
     enteringVar validCol validVar x
   where
@@ -251,7 +256,7 @@ phaseIEntering x =
 maximizeEntering
     :: (IsTableau 'PhaseII v s a c)
     => Tableau 'PhaseII 'Max v s a c
-    -> Either TwoPhaseStop (Finite (Cols 'PhaseII v s a))
+    -> Either TwoPhaseError (Finite (Cols 'PhaseII v s a))
 maximizeEntering x =
     enteringVar validCol validVar x
   where
@@ -265,7 +270,7 @@ maximizeEntering x =
 minimizeEntering
     :: (IsTableau 'PhaseII v s a c)
     => Tableau 'PhaseII 'Min v s a c
-    -> Either TwoPhaseStop (Finite (Cols 'PhaseII v s a))
+    -> Either TwoPhaseError (Finite (Cols 'PhaseII v s a))
 minimizeEntering x =
     enteringVar validCol validVar x
   where
@@ -282,7 +287,7 @@ tableauLeaving
     :: (IsTableau p v s a c)
     => Finite (Cols p v s a)
     -> Tableau p d v s a c
-    -> Either TwoPhaseStop (Finite (Rows p c))
+    -> Either TwoPhaseError (Finite (Rows p c))
 tableauLeaving enter (Tableau vs x) =
     case toRatio <$> filter canLeave rows of
         [] -> Left Unbounded
@@ -304,9 +309,10 @@ tableauLeaving enter (Tableau vs x) =
 
 tableauStep
     :: (IsTableau p v s a c)
-    => (Tableau p d v s a c -> Either TwoPhaseStop (Finite (Cols p v s a)))
+    => (Tableau p d v s a c
+        -> Either TwoPhaseError (Finite (Cols p v s a)))
     -> Tableau p d v s a c
-    -> Either TwoPhaseStop (Tableau p d v s a c)
+    -> Either TwoPhaseError (Tableau p d v s a c)
 tableauStep tableauEntering t@(Tableau vs x) = do
     enter <- tableauEntering t
     leave <- tableauLeaving enter t

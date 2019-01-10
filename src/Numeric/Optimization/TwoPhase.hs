@@ -10,15 +10,15 @@
 module Numeric.Optimization.TwoPhase
     ( -- * Two-Phase Simplex
       TwoPhase
-    , TwoPhaseStop
-    , TwoPhaseVars
+    , TwoPhaseError
+    , TwoPhaseResult
     , twoPhase
     ) where
 
 import Data.Finite                              (Finite)
 
 import Numeric.Optimization.Problem             (Problem, Direction(..))
-import Numeric.Optimization.Solver.Class        (Solver(..))
+import Numeric.Optimization.Solver              (Solver(..))
 import Numeric.Optimization.TwoPhase.Tableau
 import Numeric.Optimization.TwoPhase.Types
 
@@ -38,9 +38,8 @@ instance (IsTwoPhase v s a c) => Show (TwoPhase d v s a c) where
 
 
 instance (IsTwoPhase v s a c) => Solver (TwoPhase 'Max v s a c) where
-    type CanSolve (TwoPhase 'Max v s a c) = IsTwoPhase v s a c
-    type Stop     (TwoPhase 'Max v s a c) = TwoPhaseStop
-    type Vars     (TwoPhase 'Max v s a c) = TwoPhaseVars 'Max v
+    type Error  (TwoPhase 'Max v s a c) = TwoPhaseError
+    type Result (TwoPhase 'Max v s a c) = TwoPhaseResult 'Max v
 
     isOptimal   = twoPhaseOptimal maximizeOptimal
     step        = twoPhaseStep maximizeEntering
@@ -48,9 +47,8 @@ instance (IsTwoPhase v s a c) => Solver (TwoPhase 'Max v s a c) where
 
 
 instance (IsTwoPhase v s a c) => Solver (TwoPhase 'Min v s a c) where
-    type CanSolve (TwoPhase 'Min v s a c) = IsTwoPhase v s a c
-    type Stop     (TwoPhase 'Min v s a c) = TwoPhaseStop
-    type Vars     (TwoPhase 'Min v s a c) = TwoPhaseVars 'Min v
+    type Error  (TwoPhase 'Min v s a c) = TwoPhaseError
+    type Result (TwoPhase 'Min v s a c) = TwoPhaseResult 'Min v
 
     isOptimal   = twoPhaseOptimal minimizeOptimal
     step        = twoPhaseStep minimizeEntering
@@ -83,17 +81,22 @@ twoPhaseOptimal f (TableauII x) = f x
 twoPhaseResult
     :: (IsTwoPhase v s a c)
     => TwoPhase d v s a c
-    -> TwoPhaseVars d v
+    -> TwoPhaseResult d v
 twoPhaseResult (TableauI  x)  = tableauResult x
 twoPhaseResult (TableauII x)  = tableauResult x
 
 
+-- When stepping the solver, it is important to convert between phases when
+-- appropriate. This means that if the tableau is in phase I, it must check
+-- whether the current state is infeasible (in which case optimization stops)
+-- or optimal (in which case the optimization changes to phase II).
+--
 twoPhaseStep
     :: (IsTwoPhase v s a c)
     => (Tableau 'PhaseII d v s a c
-        -> Either TwoPhaseStop (Finite (Cols 'PhaseII v s a)))
+        -> Either TwoPhaseError (Finite (Cols 'PhaseII v s a)))
     -> TwoPhase d v s a c
-    -> Either TwoPhaseStop (TwoPhase d v s a c)
+    -> Either TwoPhaseError (TwoPhase d v s a c)
 twoPhaseStep f state = case state of
     TableauI  x
         | tableauInfeasible x   -> Left Infeasible

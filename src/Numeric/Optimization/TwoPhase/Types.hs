@@ -16,11 +16,11 @@ module Numeric.Optimization.TwoPhase.Types
     , isSlack
     , isArtificial
       -- * Solver Types
-    , TwoPhaseStop(..)
-    , TwoPhaseVars(..)
+    , TwoPhaseError(..)
+    , TwoPhaseResult(..)
     ) where
 
-import GHC.TypeLits                     (Nat, type (+))
+import GHC.TypeLits
 import Data.Vector.Sized                (Vector)
 
 import Numeric.Optimization.Problem     (Direction)
@@ -89,14 +89,14 @@ isArtificial _            = False
 
 -- Solver Types
 
-data TwoPhaseStop
+data TwoPhaseError
     = Infeasible
     | Unbounded
     | NoEntering
     deriving (Eq, Show)
 
 
-newtype TwoPhaseVars (d :: Direction) (v :: Nat) =
-    TwoPhaseVars { getVars :: Vector (v + 1) (VarName, Double) }
+newtype TwoPhaseResult (d :: Direction) (v :: Nat) =
+    TwoPhaseResult { getResult :: Vector (v + 1) (VarName, Double) }
     deriving (Eq, Show)
 

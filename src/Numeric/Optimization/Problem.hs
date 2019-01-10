@@ -97,6 +97,17 @@ type IsProblem v s a c =
     (KnownNat v, KnownNat s, KnownNat a, KnownNat c)
 
 
+-- A linear programming problem attempts to find the maximum or minimum value
+-- of an objective function, while satisfying some constraints. The objective
+-- function is specified as a vector of coefficients, and constraints as
+-- equally sized vectors of coefficients. Slack variables and artificial
+-- variable coefficients are not given --- these variables should be added by
+-- the solver of choice (as to not add them incorrectly).
+--
+-- To hide the dependency on vector-sized, problems are currently created using
+-- smart constructors. Unidirectional patterns (with better names) are exported
+-- from this module to still allow pattern matching.
+--
 data Problem :: Direction -> Nat -> Nat -> Nat -> Nat -> Type where
     FindMax :: (KnownNat v) => Coeffs v -> Problem 'Max v 0 0 0
     FindMin :: (KnownNat v) => Coeffs v -> Problem 'Min v 0 0 0

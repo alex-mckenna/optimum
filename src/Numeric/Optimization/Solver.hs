@@ -1,26 +1,40 @@
-{-# LANGUAGE ConstraintKinds    #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Numeric.Optimization.Solver
     ( -- * Solver
       Solver(..)
-    , IsSolver
     , solveWith
     ) where
 
-import Numeric.Optimization.Problem         (Problem)
-import Numeric.Optimization.Solver.Class
+import Numeric.Optimization.Problem (Problem)
 
 
-type IsSolver a =
-    (Solver a, CanSolve a)
+-- For a type to be a solver, it needs only support three functions. One to
+-- check if the current state is optimal, one to extract a result from a state
+-- and one to try and step to the next state. While this may seem limited, it
+-- should work for both native and foreign solvers.
+--
+-- Foreign solvers will likely define step as being a routine which performs
+-- many steps in one go, returning a value containing the final state / error.
+--
+class Solver method where
+    type Error  method
+    type Result method
+
+    isOptimal   :: method -> Bool
+    toResult    :: method -> Result method
+    step        :: method -> Either (Error method) method
 
 
+-- Solve an optimization problem using the method provided. If the
+-- optimization finds an optimal state, the result from that state is
+-- returned. Otherwise, the error which occured while solving is returned.
+--
 solveWith
-    :: (IsSolver method)
+    :: (Solver method)
     => (Problem d v s a c -> method)
     -> Problem d v s a c
-    -> Either (Stop method) (Vars method)
+    -> Either (Error method) (Result method)
 solveWith mkSolver problem =
     go $ mkSolver problem
   where

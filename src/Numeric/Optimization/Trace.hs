@@ -7,13 +7,20 @@ module Numeric.Optimization.Trace where
 
 import Debug.Trace
 
-import Numeric.Optimization.Solver.Class
+import Numeric.Optimization.Solver  (Solver(..))
 
 
 type IsTrace a =
-    (Solver a, Show a, Show (Stop a), Show (Vars a))
+    (Solver a, Show a, Show (Error a), Show (Result a))
 
 
+-- The tracing solver wraps another solver, and inserts calls to trace when
+-- the underlying solver checks for optimality or takes a step. This is for
+-- people who want to
+--
+--   * see what happens when a problem is solved
+--   * debug the implementation of a particular solver easily
+--
 newtype Trace a = Trace { getSolver :: a }
 
 instance (Show a) => Show (Trace a) where
@@ -21,9 +28,8 @@ instance (Show a) => Show (Trace a) where
 
 
 instance (IsTrace a) => Solver (Trace a) where
-    type CanSolve (Trace a) = CanSolve a
-    type Stop     (Trace a) = Stop a
-    type Vars     (Trace a) = Vars a
+    type Error  (Trace a) = Error a
+    type Result (Trace a) = Result a
 
     isOptimal   =
         trace "isOptimal = " . traceShowId . isOptimal . getSolver

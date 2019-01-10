@@ -46,18 +46,14 @@ data VarMap rows cols = VarMap
 
 
 mkVarMap
-    :: forall d v s a c rows cols.
+    :: forall d v s a c.
         ( KnownNat v
         , KnownNat s
         , KnownNat a
         , KnownNat c
-        , KnownNat rows
-        , KnownNat cols
-        , rows ~ Rows 'PhaseI c
-        , cols ~ Cols 'PhaseI v s a
         )
     => Problem d v s a c
-    -> VarMap rows cols
+    -> VarMap (Rows 'PhaseI c) (Cols 'PhaseI v s a)
 mkVarMap =
     flip VarMap cols . fromJust . Vec.fromList . go []
   where
