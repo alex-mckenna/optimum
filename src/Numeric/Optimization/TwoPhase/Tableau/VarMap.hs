@@ -5,7 +5,7 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 
-module Numeric.Optimization.TwoPhase.VarMap
+module Numeric.Optimization.TwoPhase.Tableau.VarMap
     ( -- * Variable Maps
       VarMap(..)
     , IsVarMap
@@ -39,16 +39,14 @@ type IsVarMap rows cols =
     (KnownNat rows, KnownNat cols)
 
 
-data VarMap (p :: Phase) (rows :: Nat) (cols :: Nat)
-    = VarMap
-        { rowVars    :: Vector rows VarName
-        , columnVars :: Vector cols VarName
-        }
-    deriving (Eq, Show)
+data VarMap rows cols = VarMap
+    { rowVars    :: Vector rows VarName
+    , columnVars :: Vector cols VarName
+    } deriving (Eq, Show)
 
 
 mkVarMap
-    :: forall v s a c rows cols.
+    :: forall d v s a c rows cols.
         ( KnownNat v
         , KnownNat s
         , KnownNat a
@@ -58,8 +56,8 @@ mkVarMap
         , rows ~ Rows 'PhaseI c
         , cols ~ Cols 'PhaseI v s a
         )
-    => Problem v s a c
-    -> VarMap 'PhaseI rows cols
+    => Problem d v s a c
+    -> VarMap rows cols
 mkVarMap =
     flip VarMap cols . fromJust . Vec.fromList . go []
   where
@@ -69,7 +67,7 @@ mkVarMap =
     slack       = Vec.generate @s (Slack . fromIntegral)
     artificial  = Vec.generate @a (Artificial . fromIntegral)
 
-    go :: forall x y z. [VarName] -> Problem v x y z -> [VarName]
+    go :: forall x y z. [VarName] -> Problem d v x y z -> [VarName]
     go acc (Maximize _)   = Objective PhaseI : Objective PhaseII : acc
     go acc (SuchThat p c) = case c of
         (_:=_)  -> go (lastArtificial : acc) p
@@ -82,7 +80,7 @@ mkVarMap =
 indexColumns
     :: (IsVarMap rows cols)
     => Finite cols
-    -> VarMap p rows cols
+    -> VarMap rows cols
     -> VarName
 indexColumns i x =
     Vec.index (columnVars x) i
@@ -91,7 +89,7 @@ indexColumns i x =
 findColumns
     :: (IsVarMap rows cols)
     => (VarName -> Bool)
-    -> VarMap p rows cols
+    -> VarMap rows cols
     -> [VarName]
 findColumns f =
     List.filter f . Vec.toList . columnVars
@@ -100,7 +98,7 @@ findColumns f =
 findIndicesColumns
     :: (IsVarMap rows cols)
     => (VarName -> Bool)
-    -> VarMap p rows cols
+    -> VarMap rows cols
     -> [Finite cols]
 findIndicesColumns f =
     fmap fromIntegral . List.findIndices f . Vec.toList . columnVars
@@ -109,7 +107,7 @@ findIndicesColumns f =
 elemIndexColumns
     :: (IsVarMap rows cols)
     => VarName
-    -> VarMap p rows cols
+    -> VarMap rows cols
     -> Maybe (Finite cols)
 elemIndexColumns n =
     Vec.elemIndex n . columnVars
@@ -118,7 +116,7 @@ elemIndexColumns n =
 indexRows
     :: (IsVarMap rows cols)
     => Finite rows
-    -> VarMap p rows cols
+    -> VarMap rows cols
     -> VarName
 indexRows i x =
     Vec.index (rowVars x) i
@@ -127,7 +125,7 @@ indexRows i x =
 elemIndexRows
     :: (IsVarMap rows cols)
     => VarName
-    -> VarMap p rows cols
+    -> VarMap rows cols
     -> Maybe (Finite rows)
 elemIndexRows n =
     Vec.elemIndex n . rowVars
@@ -136,8 +134,8 @@ elemIndexRows n =
 updateRow
     :: (IsVarMap rows cols)
     => (Finite rows, Finite cols)
-    -> VarMap p rows cols
-    -> VarMap p rows cols
+    -> VarMap rows cols
+    -> VarMap rows cols
 updateRow (i, j) (VarMap r c) =
     VarMap (r // [(i, Vec.index c j)]) c
 

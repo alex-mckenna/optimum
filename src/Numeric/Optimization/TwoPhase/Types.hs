@@ -20,8 +20,10 @@ module Numeric.Optimization.TwoPhase.Types
     , TwoPhaseVars(..)
     ) where
 
-import GHC.TypeLits         (Nat, type (+))
-import Data.Vector.Sized    (Vector)
+import GHC.TypeLits                     (Nat, type (+))
+import Data.Vector.Sized                (Vector)
+
+import Numeric.Optimization.Problem     (Direction)
 
 
 -- Phases / Phase-Dependent Types
@@ -94,7 +96,7 @@ data TwoPhaseStop
     deriving (Eq, Show)
 
 
-newtype TwoPhaseVars v =
+newtype TwoPhaseVars (d :: Direction) (v :: Nat) =
     TwoPhaseVars { getVars :: Vector (v + 1) (VarName, Double) }
     deriving (Eq, Show)
 

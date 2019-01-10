@@ -4,7 +4,11 @@
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
 
-module Numeric.Optimization.TwoPhase.Pivot where
+module Numeric.Optimization.TwoPhase.Tableau.Pivot
+    ( index
+    , allCells
+    , pivot
+    ) where
 
 import           Data.Finite                        (Finite)
 import           GHC.TypeLits                       (KnownNat)

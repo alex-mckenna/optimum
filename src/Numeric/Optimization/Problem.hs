@@ -11,17 +11,20 @@ module Numeric.Optimization.Problem
     ( -- * Linear Optimisation Problems
       Coeff
     , Coeffs
+    , Direction(..)
     , Constraint
     , Problem
     , IsProblem
       -- * Smart Constructors
     , maximize
+    , minimize
     , suchThat
     , leq
     , geq
     , equ
       -- * Pattern Synonyms
     , pattern Maximize
+    , pattern Minimize
     , pattern SuchThat
     , pattern (:<)
     , pattern (:>)
@@ -37,6 +40,9 @@ import           GHC.TypeLits                       (KnownNat, Nat, type (+))
 
 type Coeff      = Double
 type Coeffs n   = Vector n Coeff
+
+
+data Direction  = Max | Min
 
 
 -- Constraints are specified as a vector of coefficients (one for each
@@ -91,15 +97,15 @@ type IsProblem v s a c =
     (KnownNat v, KnownNat s, KnownNat a, KnownNat c)
 
 
-data Problem :: Nat -> Nat -> Nat -> Nat -> Type where
+data Problem :: Direction -> Nat -> Nat -> Nat -> Nat -> Type where
     Optimize :: (KnownNat v)
-        => Coeffs v -> Problem v 0 0 0
+        => Coeffs v -> Problem d v 0 0 0
 
     Constrained
         :: (IsProblem v s1 a1 c, IsProblem v (s1 + s2) (a1 + a2) (c + 1))
-        => Problem v s1 a1 c
+        => Problem d v s1 a1 c
         -> Constraint v s2 a2
-        -> Problem v (s1 + s2) (a1 + a2) (c + 1)
+        -> Problem d v (s1 + s2) (a1 + a2) (c + 1)
 
 {-# COMPLETE Maximize, SuchThat #-}
 
@@ -107,11 +113,18 @@ pattern Maximize
     :: ()
     => (KnownNat v)
     => Coeffs v
-    -> Problem v s a c
+    -> Problem d v s a c
 pattern Maximize xs <- Optimize xs
 
+pattern Minimize
+    :: ()
+    => (KnownNat v)
+    => Coeffs v
+    -> Problem d v s a c
+pattern Minimize xs <- Optimize xs
+
 pattern SuchThat
-    :: forall v a b c.
+    :: forall d v a b c.
         ()
     => forall s1 a1 s2 a2 c1.
         ( a ~ (s1 + s2)
@@ -120,21 +133,26 @@ pattern SuchThat
         , IsProblem v s1 a1 c1
         , IsProblem v a b c
         )
-    => Problem v s1 a1 c1
+    => Problem d v s1 a1 c1
     -> Constraint v s2 a2
-    -> Problem v a b c
+    -> Problem d v a b c
 pattern SuchThat p c <- Constrained p c
 
 
 maximize :: (KnownNat v, IndexedListLiterals input v Double)
-    => input -> Problem v 0 0 0
+    => input -> Problem 'Max v 0 0 0
 maximize = Optimize . SVec.fromTuple
+
+
+minimize :: (KnownNat v, IndexedListLiterals input v Double)
+    => input -> Problem 'Min v 0 0 0
+minimize = Optimize . SVec.fromTuple
 
 
 suchThat
     :: (IsProblem v s1 a1 c, IsProblem v (s1 + s2) (a1 + a2) (c + 1))
-    => Problem v s1 a1 c
+    => Problem d v s1 a1 c
     -> Constraint v s2 a2
-    -> Problem v (s1 + s2) (a1 + a2) (c + 1)
+    -> Problem d v (s1 + s2) (a1 + a2) (c + 1)
 suchThat = Constrained
 

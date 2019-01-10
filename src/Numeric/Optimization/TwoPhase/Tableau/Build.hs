@@ -8,7 +8,7 @@
 {-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeOperators          #-}
 
-module Numeric.Optimization.TwoPhase.Build
+module Numeric.Optimization.TwoPhase.Tableau.Build
     ( IsBuilder
     , build
     ) where
@@ -167,11 +167,12 @@ toMatrix Builder{..} =
         useRow  = SVec.index cs 0 == 0 && SVec.any (== 1) as
 
 
-build :: forall v s a c. (IsBuilder v s a c)
-    => Problem v s a c -> L (Rows 'PhaseI c) (Cols 'PhaseI v s a)
+build :: forall d v s a c. (IsBuilder v s a c)
+    => Problem d v s a c -> L (Rows 'PhaseI c) (Cols 'PhaseI v s a)
 build = toMatrix . go mkBuilder
   where
-    go :: Builder v s a c -> Problem v x y z -> Builder v s a c
+    go :: Builder v s a c -> Problem d v x y z -> Builder v s a c
     go acc (Maximize xs)    = buildObjective acc xs
+    go acc (Minimize xs)    = buildObjective acc xs
     go acc (SuchThat p c)   = go (buildConstraint acc c) p
 
