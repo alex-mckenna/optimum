@@ -98,8 +98,8 @@ type IsProblem v s a c =
 
 
 data Problem :: Direction -> Nat -> Nat -> Nat -> Nat -> Type where
-    Optimize :: (KnownNat v)
-        => Coeffs v -> Problem d v 0 0 0
+    FindMax :: (KnownNat v) => Coeffs v -> Problem 'Max v 0 0 0
+    FindMin :: (KnownNat v) => Coeffs v -> Problem 'Min v 0 0 0
 
     Constrained
         :: (IsProblem v s1 a1 c, IsProblem v (s1 + s2) (a1 + a2) (c + 1))
@@ -114,14 +114,14 @@ pattern Maximize
     => (KnownNat v)
     => Coeffs v
     -> Problem d v s a c
-pattern Maximize xs <- Optimize xs
+pattern Maximize xs <- FindMax xs
 
 pattern Minimize
     :: ()
     => (KnownNat v)
     => Coeffs v
     -> Problem d v s a c
-pattern Minimize xs <- Optimize xs
+pattern Minimize xs <- FindMin xs
 
 pattern SuchThat
     :: forall d v a b c.
@@ -141,12 +141,12 @@ pattern SuchThat p c <- Constrained p c
 
 maximize :: (KnownNat v, IndexedListLiterals input v Double)
     => input -> Problem 'Max v 0 0 0
-maximize = Optimize . SVec.fromTuple
+maximize = FindMax . SVec.fromTuple
 
 
 minimize :: (KnownNat v, IndexedListLiterals input v Double)
     => input -> Problem 'Min v 0 0 0
-minimize = Optimize . SVec.fromTuple
+minimize = FindMin . SVec.fromTuple
 
 
 suchThat

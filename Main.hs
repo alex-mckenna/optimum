@@ -33,5 +33,5 @@ example2 = maximize (2, 3, 4)
 
 main :: IO ()
 main =
-    print $ solveWith (traceSolver . twoPhase) example1a
+    print $ solveWith (traceSolver . twoPhase) example1b
 

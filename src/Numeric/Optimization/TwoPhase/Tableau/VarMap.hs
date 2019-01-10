@@ -68,13 +68,14 @@ mkVarMap =
     artificial  = Vec.generate @a (Artificial . fromIntegral)
 
     go :: forall x y z. [VarName] -> Problem d v x y z -> [VarName]
-    go acc (Maximize _)   = Objective PhaseI : Objective PhaseII : acc
     go acc (SuchThat p c) = case c of
         (_:=_)  -> go (lastArtificial : acc) p
         _       -> go (lastSlack : acc) p
       where
         lastSlack       = Slack . fromIntegral . pred . natVal $ Proxy @x
         lastArtificial  = Artificial . fromIntegral . pred . natVal $ Proxy @y
+
+    go acc _              = Objective PhaseI : Objective PhaseII : acc
 
 
 indexColumns
