@@ -35,8 +35,8 @@ solveWith
     => (Problem d v s a c -> method)
     -> Problem d v s a c
     -> Either (Error method) (Result method)
-solveWith mkSolver problem =
-    go $ mkSolver problem
+solveWith mkSolver =
+    go . mkSolver
   where
     go state
         | isOptimal state   = pure $ toResult state

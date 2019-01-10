@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE KindSignatures         #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
@@ -101,9 +100,9 @@ twoPhaseStep f state = case state of
     TableauI  x
         | tableauInfeasible x   -> Left Infeasible
         | phaseIOptimal x       -> Right . TableauII $ mkPhaseII x
-        | otherwise             -> fmap TableauI  $ stepI x
+        | otherwise             -> TableauI  <$> stepI x
 
-    TableauII x                 -> fmap TableauII $ stepII x
+    TableauII x                 -> TableauII <$> stepII x
   where
     stepI   = tableauStep phaseIEntering
     stepII  = tableauStep f

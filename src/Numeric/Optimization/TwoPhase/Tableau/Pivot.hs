@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TypeApplications       #-}
 {-# LANGUAGE TypeFamilies           #-}
 
 module Numeric.Optimization.TwoPhase.Tableau.Pivot
@@ -37,7 +36,7 @@ allCells :: (KnownNat rows, KnownNat cols)
     -> L rows cols
     -> Bool
 allCells f is x =
-    all f $ fmap (\i -> index i x) is
+    all f $ fmap (`index` x) is
 
 
 pivot :: (KnownNat rows, KnownNat cols)

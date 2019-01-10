@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE KindSignatures         #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE UndecidableInstances   #-}
 
