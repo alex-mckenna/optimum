@@ -109,8 +109,8 @@ type IsProblem v s a c =
 -- from this module to still allow pattern matching.
 --
 data Problem :: Direction -> Nat -> Nat -> Nat -> Nat -> Type where
-    FindMax :: (KnownNat v) => Coeffs v -> Problem 'Max v 0 0 0
-    FindMin :: (KnownNat v) => Coeffs v -> Problem 'Min v 0 0 0
+    FindMax :: Coeffs v -> Problem 'Max v 0 0 0
+    FindMin :: Coeffs v -> Problem 'Min v 0 0 0
 
     Constrained
         :: (IsProblem v s1 a1 c, IsProblem v (s1 + s2) (a1 + a2) (c + 1))
@@ -122,14 +122,14 @@ data Problem :: Direction -> Nat -> Nat -> Nat -> Nat -> Type where
 
 pattern Maximize
     :: ()
-    => (KnownNat v)
+    => ()
     => Coeffs v
     -> Problem d v s a c
 pattern Maximize xs <- FindMax xs
 
 pattern Minimize
     :: ()
-    => (KnownNat v)
+    => ()
     => Coeffs v
     -> Problem d v s a c
 pattern Minimize xs <- FindMin xs
