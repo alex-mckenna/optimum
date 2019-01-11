@@ -79,7 +79,7 @@ mkPhaseI
     => Problem d v s a c
     -> Tableau 'PhaseI d v s a c
 mkPhaseI x =
-    Tableau (mkVarMap x) (build x)
+    Tableau (mkVarMap x) (mkTable x)
 
 
 mkPhaseII

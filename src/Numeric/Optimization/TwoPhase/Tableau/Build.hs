@@ -10,7 +10,7 @@
 
 module Numeric.Optimization.TwoPhase.Tableau.Build
     ( IsBuilder
-    , build
+    , mkTable
     ) where
 
 import           Prelude hiding                             ((++))
@@ -169,9 +169,9 @@ toMatrix acc =
             in  newObjP1 : tail rows
 
 
-build :: forall d v s a c. (IsBuilder v s a c)
+mkTable :: forall d v s a c. (IsBuilder v s a c)
     => Problem d v s a c -> L (Rows 'PhaseI c) (Cols 'PhaseI v s a)
-build = toMatrix . go mkBuilder
+mkTable = toMatrix . go mkBuilder
   where
     go :: Builder v s a c -> Problem d v x y z -> Builder v s a c
     go acc (Maximize xs)    = buildObjective acc xs
