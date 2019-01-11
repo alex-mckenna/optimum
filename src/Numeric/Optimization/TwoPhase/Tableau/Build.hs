@@ -37,53 +37,50 @@ type IsBuilder v s a c =
     )
 
 
-data Builder (v :: Nat) (s :: Nat) (a :: Nat) (c :: Nat) =
-    Builder
-        { slackSupply       :: [Vector s Double]
-        , artificialSupply  :: [Vector a Double]
-        , coeffsBuilt       :: [Vector (2 + v) Double]
-        , slackBuilt        :: [Vector s Double]
-        , artificialBuilt   :: [Vector a Double]
-        , rhsBuilt          :: [Double]
-        }
-    deriving (Show)
-
-
-mkBuilder :: forall v s a c. (IsBuilder v s a c) => Builder v s a c
-mkBuilder = Builder slackI artificialI [] [] [] []
-  where
-    slackI      = reverse . fmap LS.rVec . LS.toRows $ LS.eye @s
-    artificialI = reverse . fmap LS.rVec . LS.toRows $ LS.eye @a
-
-
-buildPhaseI :: forall v s a c. (IsBuilder v s a c)
-    => Builder v s a c -> Builder v s a c
-buildPhaseI acc@Builder{..} = acc
-    { coeffsBuilt       = coeffs : coeffsBuilt
-    , slackBuilt        = slack : slackBuilt
-    , artificialBuilt   = artificial : artificialBuilt
-    , rhsBuilt          = rhs : rhsBuilt
+data Builder (v :: Nat) (s :: Nat) (a :: Nat) (c :: Nat) = Builder
+    { slackSupply       :: [Vector s Double]
+    , artificialSupply  :: [Vector a Double]
+    , rowsBuilt         :: [Vector (Cols 'PhaseI v s a) Double]
+    , adjustmentsBuilt  :: [Vector (Cols 'PhaseI v s a) Double]
     }
-  where
-    coeffs      = SVec.fromTuple (1, 0) ++ SVec.replicate @v 0
-    slack       = SVec.replicate 0
-    artificial  = SVec.replicate (-1)
-    rhs         = 0
 
 
-buildPhaseII :: (IsBuilder v s a c)
-    => Builder v s a c -> Coeffs v -> Builder v s a c
-buildPhaseII acc@Builder{..} xs = acc
-    { coeffsBuilt       = coeffs : coeffsBuilt
-    , slackBuilt        = slack : slackBuilt
-    , artificialBuilt   = artificial : artificialBuilt
-    , rhsBuilt          = rhs : rhsBuilt
-    }
+mkBuilder :: (IsBuilder v s a c) => Builder v s a c
+mkBuilder = Builder slackI artificialI [] []
   where
-    coeffs      = SVec.fromTuple (0, 1) ++ SVec.map negate xs
-    slack       = SVec.replicate 0
-    artificial  = SVec.replicate 0
-    rhs         = 0
+    slackI      = reverse . fmap LS.rVec . LS.toRows $ LS.eye
+    artificialI = reverse . fmap LS.rVec . LS.toRows $ LS.eye
+
+
+buildPhaseI
+    :: forall v s a c.
+        (IsBuilder v s a c)
+    => Builder v s a c
+    -> Builder v s a c
+buildPhaseI acc = acc
+    { rowsBuilt = row : rowsBuilt acc }
+  where
+    row = SVec.snoc (os ++ xs ++ ss ++ as) 0
+    os  = SVec.fromTuple (1, 0)
+    xs  = SVec.replicate @v 0
+    ss  = SVec.replicate @s 0
+    as  = SVec.replicate @a (-1)
+
+
+buildPhaseII
+    :: forall v s a c.
+        (IsBuilder v s a c)
+    => Builder v s a c
+    -> Coeffs v
+    -> Builder v s a c
+buildPhaseII acc xs' = acc
+    { rowsBuilt = row : rowsBuilt acc }
+  where
+    row = SVec.snoc (os ++ xs ++ ss ++ as) 0
+    os  = SVec.fromTuple (0, 1)
+    xs  = SVec.map negate xs'
+    ss  = SVec.replicate @s 0
+    as  = SVec.replicate @a 0
 
 
 buildObjective :: (IsBuilder v s a c)
@@ -91,51 +88,62 @@ buildObjective :: (IsBuilder v s a c)
 buildObjective acc = buildPhaseI . buildPhaseII acc
 
 
-buildLEQ :: (IsBuilder v s a c)
-    => Builder v s a c -> Coeffs v -> Double -> Builder v s a c
-buildLEQ acc@Builder{..} xs rhs = acc
-    { slackSupply       = tail slackSupply
-    , coeffsBuilt       = coeffs : coeffsBuilt
-    , slackBuilt        = slack : slackBuilt
-    , artificialBuilt   = artificial : artificialBuilt
-    , rhsBuilt          = rhs : rhsBuilt
+buildLEQ
+    :: forall v s a c.
+        (IsBuilder v s a c)
+    => Builder v s a c
+    -> Coeffs v
+    -> Double
+    -> Builder v s a c
+buildLEQ acc xs rhs = acc
+    { slackSupply   = tail (slackSupply acc)
+    , rowsBuilt     = row : rowsBuilt acc
     }
   where
-    coeffs      = SVec.replicate 0 ++ xs
-    slack       = head slackSupply
-    artificial  = SVec.replicate 0
+    row = SVec.snoc (os ++ xs ++ ss ++ as) rhs
+    os  = SVec.fromTuple (0, 0)
+    ss  = head (slackSupply acc)
+    as  = SVec.replicate @a 0
 
 
--- TODO: Redefine in terms of buildLEQ
-buildGEQ :: (IsBuilder v s a c)
-    => Builder v s a c -> Coeffs v -> Double -> Builder v s a c
-buildGEQ acc@Builder{..} xs rhs = acc
-    { slackSupply       = tail slackSupply
-    , artificialSupply  = tail artificialSupply
-    , coeffsBuilt       = coeffs : coeffsBuilt
-    , slackBuilt        = slack : slackBuilt
-    , artificialBuilt   = artificial : artificialBuilt
-    , rhsBuilt          = negate rhs : rhsBuilt
+buildGEQ
+    :: forall v s a c.
+        (IsBuilder v s a c)
+    => Builder v s a c
+    -> Coeffs v
+    -> Double
+    -> Builder v s a c
+buildGEQ acc xs' rhs' = acc
+    { slackSupply       = tail (slackSupply acc)
+    , artificialSupply  = tail (artificialSupply acc)
+    , rowsBuilt         = row : rowsBuilt acc
     }
   where
-    coeffs      = SVec.replicate 0 ++ SVec.map negate xs
-    slack       = head slackSupply
-    artificial  = head artificialSupply
+    row = SVec.snoc (os ++ xs ++ ss ++ as) rhs
+    os  = SVec.fromTuple (0, 0)
+    xs  = SVec.map negate xs'
+    ss  = head (slackSupply acc)
+    as  = head (artificialSupply acc)
+    rhs = negate rhs'
 
 
-buildEQU :: (IsBuilder v s a c)
-    => Builder v s a c -> Coeffs v -> Double -> Builder v s a c
-buildEQU acc@Builder{..} xs rhs = acc
-    { artificialSupply  = tail artificialSupply
-    , coeffsBuilt       = coeffs : coeffsBuilt
-    , slackBuilt        = slack : slackBuilt
-    , artificialBuilt   = artificial : artificialBuilt
-    , rhsBuilt          = rhs : rhsBuilt
+buildEQU
+    :: forall v s a c.
+        (IsBuilder v s a c)
+    => Builder v s a c
+    -> Coeffs v
+    -> Double
+    -> Builder v s a c
+buildEQU acc xs rhs = acc
+    { artificialSupply  = tail (artificialSupply acc)
+    , rowsBuilt         = row : rowsBuilt acc
+    , adjustmentsBuilt  = row : adjustmentsBuilt acc
     }
   where
-    coeffs      = SVec.replicate 0 ++ xs
-    slack       = SVec.replicate 0
-    artificial  = head artificialSupply
+    row = SVec.snoc (os ++ xs ++ ss ++ as) rhs
+    os  = SVec.fromTuple (0, 0)
+    ss  = SVec.replicate @s 0
+    as  = head (artificialSupply acc)
 
 
 buildConstraint :: (IsBuilder v s a c)
@@ -147,24 +155,18 @@ buildConstraint acc (xs := y) = buildEQU acc xs y
 
 toMatrix :: forall v s a c. (IsBuilder v s a c)
     => Builder v s a c -> L (Rows 'PhaseI c) (Cols 'PhaseI v s a)
-toMatrix Builder{..} =
-    LS.rowsL . fromJust . Vec.fromList
-        . fmap LS.vecR $ adjustedObj : tail rows
+toMatrix acc =
+    LS.rowsL . fromJust . Vec.fromList $ fmap LS.vecR adjusted
   where
-    rows            = fmap fst rowsAndAdjusts
-    adjustedObj     = SVec.zipWith (+) (head rows) adjustment
-    adjustment      = List.foldl1' (SVec.zipWith (+))
-        $ fmap snd rowsAndAdjusts
+    rows    = rowsBuilt acc
+    adjusts = adjustmentsBuilt acc
 
-    rowsAndAdjusts  = List.zipWith4 toRowAdjust
-        coeffsBuilt slackBuilt artificialBuilt rhsBuilt
-
-    toRowAdjust cs ss as y
-        | useRow    = (row, row)
-        | otherwise = (row, SVec.replicate 0)
-      where
-        row     = SVec.snoc (cs ++ ss ++ as) y
-        useRow  = SVec.index cs 0 == 0 && SVec.any (== 1) as
+    adjusted = case adjusts of
+        [] -> rows
+        xs ->
+            let oldObjP1  = head rows
+                newObjP1  = List.foldl1' (SVec.zipWith (+)) (oldObjP1 : xs)
+            in  newObjP1 : tail rows
 
 
 build :: forall d v s a c. (IsBuilder v s a c)
