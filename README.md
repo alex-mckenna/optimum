@@ -63,7 +63,7 @@ import Numeric.Optimization.TwoPhase
 --
 -- in the problem.
 --
-problem :: Problem 'Min 3 3 1 3
+problem :: Problem 'Min 3 2 0 2
 problem = minimize (-2, -3, -4)
     `suchThat` leq ( 3,  2,  1) 10
     `suchThat` leq ( 2,  5,  3) 15
